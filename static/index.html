@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RECON // Financial Analysis Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #04050A;
+      --surface:     #090D18;
+      --surface-2:   #0E1422;
+      --surface-3:   #141C2E;
+      --border:      #1A2438;
+      --border-2:    #263550;
+      --text-dim:    #334E6A;
+      --text:        #6685A4;
+      --text-bright: #A8C0D6;
+      --text-white:  #D6EAF8;
+      --amber:       #F0A500;
+      --amber-bright:#FFB91A;
+      --amber-dim:   rgba(240,165,0,0.10);
+      --amber-glow:  rgba(240,165,0,0.22);
+      --green:       #1DB87A;
+      --green-bright:#2DD4A0;
+      --green-dim:   rgba(29,184,122,0.10);
+      --red:         #D94040;
+      --red-bright:  #FF5757;
+      --red-dim:     rgba(217,64,64,0.10);
+      --font-mono:   'JetBrains Mono', monospace;
+      --font-disp:   'Bebas Neue', sans-serif;
+    }
+
+    html, body {
+      min-height: 100%;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px
+      );
+      pointer-events: none; z-index: 9000;
+    }
+
+    /* ── Header ── */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(4,5,10,0.94); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: baseline; gap: 12px; }
+    .logo-word {
+      font-family: var(--font-disp); font-size: 32px;
+      letter-spacing: 0.1em; color: var(--amber);
+      text-shadow: 0 0 20px var(--amber-glow); line-height: 1;
+    }
+    .logo-sep { color: var(--border-2); font-size: 18px; }
+    .logo-sub { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+    .cursor {
+      display: inline-block; width: 7px; height: 12px;
+      background: var(--amber); margin-left: 3px; vertical-align: middle;
+      animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .h-badge { font-size: 10px; letter-spacing: 0.12em; color: var(--text-dim); }
+    .dot-live {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 5px var(--green);
+      margin-right: 5px; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .wipe-btn {
+      background: none; border: 1px solid var(--border-2);
+      color: var(--text-dim); font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 5px 12px; cursor: pointer; border-radius: 2px; transition: all .2s;
+    }
+    .wipe-btn:hover { border-color: var(--red); color: var(--red-bright); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      background: rgba(4,5,10,0.7); backdrop-filter: blur(8px);
+      position: sticky; top: 56px; z-index: 90;
+    }
+    .tab {
+      padding: 14px 0; margin-right: 32px;
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--text-dim); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .2s, border-color .2s; user-select: none;
+    }
+    .tab:hover:not(.tab--disabled) { color: var(--text); }
+    .tab.tab--active  { color: var(--amber); border-bottom-color: var(--amber); }
+    .tab.tab--disabled { opacity: .25; cursor: not-allowed; }
+
+    /* ── Main ── */
+    .main { padding: 40px 28px 80px; max-width: 1280px; margin: 0 auto; }
+    .panel { display: none; }
+    .panel.panel--active { display: block; }
+
+    /* ── Upload panel ── */
+    .section-title {
+      font-family: var(--font-disp); font-size: 48px;
+      letter-spacing: 0.05em; color: var(--text-white); line-height: 1; margin-bottom: 6px;
+    }
+    .section-sub { font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; margin-bottom: 32px; }
+
+    .upload-zone {
+      position: relative; border: 1px dashed var(--border-2);
+      background: var(--surface); border-radius: 3px;
+      padding: 52px 32px; text-align: center; cursor: pointer;
+      transition: all .2s; margin-bottom: 18px; overflow: hidden;
+    }
+    .upload-zone::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, var(--amber-dim) 0%, transparent 70%);
+      opacity: 0; transition: opacity .3s;
+    }
+    .upload-zone:hover::before, .upload-zone.drag--over::before { opacity: 1; }
+    .upload-zone:hover { border-color: var(--amber); }
+    .upload-zone.drag--over { border-color: var(--amber-bright); box-shadow: inset 0 0 50px var(--amber-glow); }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .upload-zone-inner { position: relative; z-index: 1; }
+    .upload-icon { font-size: 36px; color: var(--text-dim); margin-bottom: 14px; display: block; transition: color .2s; }
+    .upload-zone:hover .upload-icon, .upload-zone.drag--over .upload-icon { color: var(--amber); }
+    .upload-zone-title { font-family: var(--font-disp); font-size: 24px; letter-spacing: 0.12em; color: var(--text-bright); margin-bottom: 6px; }
+    .upload-zone-hint { font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .file-list { margin-bottom: 24px; }
+    .file-list-header {
+      display: flex; justify-content: space-between;
+      font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--text-dim); padding: 7px 0;
+      border-bottom: 1px solid var(--border); margin-bottom: 5px;
+    }
+    .file-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 2px; margin-bottom: 3px;
+      animation: slideIn .15s ease;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+    .file-item-left { display: flex; align-items: center; gap: 10px; }
+    .file-tag {
+      font-size: 9px; letter-spacing: 0.1em; font-weight: 600;
+      padding: 2px 6px; border-radius: 1px;
+    }
+    .file-tag-pdf  { background: var(--red-dim);   color: var(--red-bright);  border: 1px solid rgba(217,64,64,.25); }
+    .file-tag-csv  { background: var(--amber-dim); color: var(--amber);       border: 1px solid rgba(240,165,0,.25); }
+    .file-tag-img  { background: var(--green-dim); color: var(--green-bright);border: 1px solid rgba(29,184,122,.25); }
+    .file-tag-xls  { background: var(--green-dim); color: var(--green-bright);border: 1px solid rgba(29,184,122,.25); }
+    .file-name { color: var(--text-bright); font-size: 12px; }
+    .file-size { font-size: 10px; color: var(--text-dim); }
+    .file-remove {
+      background: none; border: none; color: var(--text-dim);
+      cursor: pointer; font-family: var(--font-mono); font-size: 13px;
+      padding: 2px 7px; transition: color .15s;
+    }
+    .file-remove:hover { color: var(--red-bright); }
+
+    .error-block {
+      background: var(--red-dim); border: 1px solid var(--red);
+      color: var(--red-bright); padding: 11px 14px;
+      border-radius: 2px; font-size: 12px; margin-bottom: 14px;
+    }
+
+    .process-btn {
+      width: 100%; padding: 18px;
+      background: var(--amber-dim); border: 1px solid var(--amber);
+      color: var(--amber); font-family: var(--font-disp);
+      font-size: 28px; letter-spacing: 0.22em;
+      cursor: pointer; transition: all .22s; border-radius: 2px;
+      position: relative; overflow: hidden;
+    }
+    .process-btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--amber); transform: scaleX(0); transform-origin: left;
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .process-btn:hover:not(:disabled)::before { transform: scaleX(1); }
+    .process-btn:hover:not(:disabled) { color: var(--bg); }
+    .process-btn span { position: relative; z-index: 1; }
+    .process-btn:disabled { opacity: .22; cursor: not-allowed; background: transparent; border-color: var(--border-2); color: var(--text-dim); }
+    .process-btn:disabled::before { display: none; }
+
+    /* ── Analysis panel ── */
+    .terminal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; overflow: hidden; margin-bottom: 32px;
+    }
+    .terminal-bar {
+      display: flex; align-items: center; gap: 7px;
+      padding: 11px 16px; background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .tdot { width: 10px; height: 10px; border-radius: 50%; }
+    .tdot-r{background:#D94040} .tdot-a{background:#F0A500} .tdot-g{background:#1DB87A}
+    .terminal-label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); margin-left: 6px; }
+    .terminal-body { padding: 18px 20px; min-height: 140px; }
+    .log-line {
+      font-size: 12px; line-height: 1.8; color: var(--text); margin-bottom: 1px;
+      opacity: 0; animation: fadeInLog .22s ease forwards;
+    }
+    @keyframes fadeInLog { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
+    .log-line .pfx { color: var(--text-dim); margin-right: 10px; }
+    .log-line.ok   .pfx { color: var(--green); }
+    .log-line.err  .pfx { color: var(--red-bright); }
+    .log-line.ai   .pfx { color: var(--amber); }
+    .log-line.done     { color: var(--amber-bright); font-weight: 600; }
+    .log-line.active   { color: var(--text-dim); }
+    .log-line.active .pfx { color: var(--amber); }
+    .log-pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--amber); margin-left: 8px; vertical-align: middle;
+      animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.6)} }
+
+    /* Results */
+    .results { display: none; }
+    .results.results--visible { display: block; }
+
+    /* Stat grid */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 10px; margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 2px; padding: 18px 16px;
+      opacity: 0; animation: fadeUp .4s ease forwards;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+    .stat-label { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+    .stat-value { font-family: var(--font-disp); font-size: 38px; letter-spacing: 0.02em; color: var(--amber); line-height: 1; }
+    .stat-value.pos { color: var(--green-bright); }
+    .stat-value.neg { color: var(--red-bright); }
+    .stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
+
+    /* Transaction table */
+    .txn-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 2px; margin-bottom: 16px;
+      max-height: 380px; display: flex; flex-direction: column;
+      opacity: 0; animation: fadeUp .4s ease .08s forwards;
+    }
+    .txn-head {
+      display: grid; grid-template-columns: 96px 1fr 130px 100px;
+      padding: 9px 14px; background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--amber);
+      flex-shrink: 0;
+    }
+    .txn-head-amt { text-align: right; }
+    .txn-body { overflow-y: auto; flex: 1; }
+    .txn-row {
+      display: grid; grid-template-columns: 96px 1fr 130px 100px;
+      padding: 7px 14px; border-bottom: 1px solid var(--border);
+      font-size: 11px; align-items: center; transition: background .1s;
+    }
+    .txn-row:last-child { border-bottom: none; }
+    .txn-row:hover { background: var(--surface-2); }
+    .txn-date { color: var(--text-dim); letter-spacing: 0; }
+    .txn-desc { color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 12px; }
+    .txn-cat  { color: var(--text); font-size: 10px; letter-spacing: 0.04em; }
+    .txn-amt  { text-align: right; font-weight: 600; letter-spacing: 0; }
+    .txn-amt.cr { color: var(--green-bright); }
+    .txn-amt.dr { color: var(--red-bright); }
+    .txn-orig-cur { display: block; font-size: 9px; font-weight: 400; opacity: 0.55; letter-spacing: 0.04em; }
+    .txn-toolbar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .txn-search {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+    .txn-search::placeholder { color: var(--text-dim); }
+    .txn-search-icon { color: var(--text-dim); font-size: 11px; flex-shrink: 0; }
+    .txn-count {
+      font-size: 10px; color: var(--text-dim); padding: 6px 14px;
+      border-top: 1px solid var(--border); flex-shrink: 0; letter-spacing: 0.08em;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .export-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+      padding: 3px 8px; cursor: pointer; border-radius: 2px; transition: all .15s;
+    }
+    .export-btn:hover { border-color: var(--amber); color: var(--amber); }
+    .txn-flag { color: var(--red-bright); font-size: 10px; margin-left: 5px; cursor: help; }
+    /* Chat starter chips */
+    .chat-chips {
+      display: flex; flex-wrap: wrap; gap: 7px;
+      padding: 16px 0 8px; justify-content: center;
+    }
+    .chip {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-dim); font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.05em; padding: 6px 12px; border-radius: 2px;
+      cursor: pointer; transition: all .15s;
+    }
+    .chip:hover { border-color: var(--amber); color: var(--amber); }
+
+    /* Two-column narrative+insights */
+    .two-col {
+      display: grid; grid-template-columns: 1.1fr 0.9fr;
+      gap: 16px; margin-bottom: 16px;
+    }
+    .result-block {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 2px; padding: 20px;
+      opacity: 0; animation: fadeUp .4s ease forwards;
+    }
+    .block-title {
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--amber); margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .block-title::before { content: ''; display: inline-block; width: 14px; height: 1px; background: var(--amber); }
+    .narrative-body { font-size: 12px; color: var(--text-bright); line-height: 1.9; white-space: pre-wrap; }
+    .insight-row {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--text-bright);
+    }
+    .insight-row:last-child { border-bottom: none; }
+    .ins-num { color: var(--amber); font-size: 10px; flex-shrink: 0; padding-top: 1px; }
+
+    /* Actions */
+    .actions-row {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 10px; margin-bottom: 16px;
+      opacity: 0; animation: fadeUp .4s ease .2s forwards;
+    }
+    .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; padding: 14px; }
+    .priority-tag {
+      display: inline-block; font-size: 9px; letter-spacing: 0.18em; font-weight: 600;
+      padding: 3px 8px; border-radius: 1px; margin-bottom: 8px;
+    }
+    .p-HIGH   { background:var(--red-dim);   color:var(--red-bright); border:1px solid var(--red); }
+    .p-MEDIUM { background:var(--amber-dim); color:var(--amber);      border:1px solid rgba(240,165,0,.35); }
+    .p-LOW    { background:var(--green-dim); color:var(--green-bright);border:1px solid var(--green); }
+    .action-body { font-size: 12px; color: var(--text-bright); line-height: 1.7; }
+
+    /* Risk flags */
+    .risk-block {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 2px solid var(--red); border-radius: 2px; padding: 16px 20px;
+      margin-bottom: 16px; opacity: 0; animation: fadeUp .4s ease .3s forwards;
+    }
+    .risk-block.clear { border-left-color: var(--green); }
+    .risk-item {
+      display: flex; align-items: flex-start; gap: 9px;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--text-bright);
+    }
+    .risk-item:last-child { border-bottom: none; }
+    .risk-icon { color: var(--red-bright); flex-shrink: 0; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    .restart-btn {
+      background: none; border: 1px solid var(--border-2); color: var(--text);
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em;
+      text-transform: uppercase; padding: 10px 22px; cursor: pointer; border-radius: 2px;
+      transition: all .2s;
+    }
+    .restart-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+    /* ── Chat panel ── */
+    .chat-wrap {
+      display: flex; flex-direction: column;
+      height: calc(100vh - 158px); min-height: 480px;
+    }
+    .chat-messages {
+      flex: 1; overflow-y: auto;
+      padding: 20px 0; display: flex; flex-direction: column; gap: 18px;
+    }
+    .chat-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; gap: 10px;
+      color: var(--text-dim); text-align: center;
+    }
+    .chat-empty-icon { font-family: var(--font-disp); font-size: 56px; color: var(--border-2); }
+    .chat-empty-title { font-family: var(--font-disp); font-size: 20px; letter-spacing: 0.1em; color: var(--text-dim); }
+    .chat-empty-sub { font-size: 11px; letter-spacing: 0.07em; }
+    .msg { display: flex; gap: 12px; align-items: flex-start; animation: fadeInLog .2s ease; }
+    .msg-avatar {
+      width: 26px; height: 26px; border-radius: 2px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; letter-spacing: 0.08em; margin-top: 2px;
+    }
+    .msg.user .msg-avatar { background: var(--surface-3); color: var(--text-bright); border: 1px solid var(--border-2); }
+    .msg.agent .msg-avatar { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(240,165,0,.3); }
+    .msg-body { flex: 1; }
+    .msg-header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 5px; }
+    .msg-name { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; }
+    .msg.user  .msg-name { color: var(--text-dim); }
+    .msg.agent .msg-name { color: var(--amber); }
+    .msg-time { font-size: 10px; color: var(--text-dim); }
+    .msg-text { font-size: 12px; color: var(--text-bright); line-height: 1.85; white-space: pre-wrap; }
+    .msg.user .msg-text {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 9px 13px; border-radius: 2px; display: inline-block;
+    }
+    .msg-thinking { display: flex; gap: 4px; align-items: center; padding: 8px 0; }
+    .think-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); animation: thinkPulse 1.2s ease infinite; }
+    .think-dot:nth-child(2){animation-delay:.2s} .think-dot:nth-child(3){animation-delay:.4s}
+    @keyframes thinkPulse { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+    .chat-input-row { border-top: 1px solid var(--border); padding-top: 16px; display: flex; gap: 8px; }
+    .chat-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border-2);
+      border-radius: 2px; color: var(--text-bright); font-family: var(--font-mono);
+      font-size: 12px; padding: 11px 14px; outline: none; transition: border-color .2s;
+      resize: none; min-height: 42px; max-height: 110px;
+    }
+    .chat-input:focus { border-color: var(--amber); }
+    .chat-input::placeholder { color: var(--text-dim); }
+    .chat-send {
+      background: var(--amber-dim); border: 1px solid var(--amber);
+      color: var(--amber); font-family: var(--font-disp);
+      font-size: 17px; letter-spacing: 0.18em;
+      padding: 0 20px; border-radius: 2px; cursor: pointer;
+      transition: all .2s; white-space: nowrap;
+    }
+    .chat-send:hover:not(:disabled) { background: var(--amber); color: var(--bg); }
+    .chat-send:disabled { opacity: .28; cursor: not-allowed; }
+
+    /* Locked chat state */
+    .chat-locked {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 60vh; gap: 12px; text-align: center;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .txn-head, .txn-row { grid-template-columns: 80px 1fr 90px; }
+      .txn-head > :nth-child(3), .txn-row > :nth-child(3) { display: none; }
+      .two-col    { grid-template-columns: 1fr; }
+      .actions-row{ grid-template-columns: 1fr; }
+    }
+    @media (max-width: 580px) {
+      .main { padding: 24px 14px 60px; }
+      .header, .tabs { padding-left: 14px; padding-right: 14px; }
+      .header-right .h-badge:not(.wipe-btn) { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  /* ── Chart section ── */
+  .chart-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 2px; margin-bottom: 16px; padding: 16px 20px 12px;
+  }
+  .chart-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .chart-title {
+    font-size: 9px; letter-spacing: 0.14em; color: var(--amber);
+    text-transform: uppercase;
+  }
+  .chart-title::before { content: '— '; }
+  .chart-legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 9px; color: var(--text-dim); letter-spacing: 0.06em;
+    cursor: pointer; user-select: none; transition: opacity .15s;
+  }
+  .legend-item:hover { color: var(--text); }
+  .legend-item.hidden { opacity: 0.3; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .chart-canvas-wrap { position: relative; height: 220px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">
+      <span class="logo-word">RECON</span>
+      <span class="logo-sep">//</span>
+      <span class="logo-sub">Financial Analysis Terminal<span class="cursor"></span></span>
+    </div>
+    <div class="header-right">
+      <span class="h-badge"><span class="dot-live"></span>ONLINE</span>
+      <span class="h-badge">GEMINI 2.5 FLASH</span>
+      <span class="h-badge">GOOGLE ADK</span>
+      <button class="wipe-btn" onclick="wipeData()">WIPE DB</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <div class="tab tab--active"   id="tab-upload"   onclick="switchTab('upload')">01 / Upload</div>
+    <div class="tab tab--disabled" id="tab-analysis" onclick="switchTab('analysis')">02 / Analysis</div>
+    <div class="tab tab--disabled" id="tab-chat"     onclick="switchTab('chat')">03 / Q&amp;A Chat</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ── Upload panel ── -->
+    <div class="panel panel--active" id="panel-upload">
+      <div class="section-title">UPLOAD STATEMENTS</div>
+      <div class="section-sub">// PDF, CSV, Excel, or image files — Gemini extracts and analyzes your real data</div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" multiple
+          accept=".pdf,.csv,.xlsx,.xls,.txt,.jpg,.jpeg,.png,.webp">
+        <div class="upload-zone-inner">
+          <span class="upload-icon">⬆</span>
+          <div class="upload-zone-title">DROP FILES HERE</div>
+          <div class="upload-zone-hint">PDF · CSV · Excel · Image &nbsp;·&nbsp; Multiple files accepted</div>
+        </div>
+      </div>
+
+      <div class="file-list" id="fileList"></div>
+      <div id="errorArea"></div>
+
+      <button class="process-btn" id="processBtn" disabled onclick="processFiles()">
+        <span>INITIALIZE ANALYSIS</span>
+      </button>
+    </div>
+
+    <!-- ── Analysis panel ── -->
+    <div class="panel" id="panel-analysis">
+      <div class="terminal" id="terminalWindow">
+        <div class="terminal-bar">
+          <span class="tdot tdot-r"></span>
+          <span class="tdot tdot-a"></span>
+          <span class="tdot tdot-g"></span>
+          <span class="terminal-label">recon — financial analysis engine</span>
+        </div>
+        <div class="terminal-body" id="logOutput"></div>
+      </div>
+
+      <div class="results" id="results">
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="chart-section" id="chartSection" style="display:none">
+          <div class="chart-header">
+            <span class="chart-title">Category Spending Over Time</span>
+            <div class="chart-legend" id="chartLegend"></div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="spendChart"></canvas>
+          </div>
+        </div>
+
+        <div class="txn-wrap" id="txnWrap">
+          <div class="txn-toolbar">
+            <span class="txn-search-icon">⌕</span>
+            <input class="txn-search" id="txnSearch" placeholder="SEARCH TRANSACTIONS…" oninput="filterTxns()" autocomplete="off">
+          </div>
+          <div class="txn-head">
+            <span>Date</span>
+            <span>Description</span>
+            <span>Category</span>
+            <span class="txn-head-amt">Amount</span>
+          </div>
+          <div class="txn-body" id="txnBody"></div>
+          <div class="txn-count" id="txnCount">
+            <span id="txnCountText"></span>
+            <button class="export-btn" onclick="exportCSV()">↓ EXPORT CSV</button>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="result-block" style="animation-delay:.12s">
+            <div class="block-title">Financial Narrative</div>
+            <div class="narrative-body" id="narrativeBody"></div>
+          </div>
+          <div class="result-block" style="animation-delay:.2s">
+            <div class="block-title">Key Insights</div>
+            <div id="insightsList"></div>
+          </div>
+        </div>
+
+        <div class="block-title" style="margin-bottom:10px">Recommended Actions</div>
+        <div class="actions-row" id="actionsRow"></div>
+
+        <hr class="divider">
+        <div id="riskSection"></div>
+
+        <button class="restart-btn" onclick="startOver()">← ANALYZE NEW STATEMENTS</button>
+      </div>
+    </div>
+
+    <!-- ── Chat panel ── -->
+    <div class="panel" id="panel-chat">
+      <div class="chat-locked" id="chatLocked">
+        <div class="chat-empty-icon">?</div>
+        <div class="chat-empty-title">RUN ANALYSIS FIRST</div>
+        <div class="chat-empty-sub">Upload statements and run analysis to enable Q&amp;A</div>
+      </div>
+      <div class="chat-wrap" id="chatUnlocked" style="display:none">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty" id="chatPlaceholder">
+            <div class="chat-empty-icon">◈</div>
+            <div class="chat-empty-title">ASK ANYTHING</div>
+            <div class="chat-empty-sub">Gemini has your full transaction history. Ask follow-up questions.</div>
+            <div class="chat-chips">
+              <div class="chip" onclick="chipAsk(this)">What are my top 3 expense categories?</div>
+              <div class="chip" onclick="chipAsk(this)">Am I saving money this period?</div>
+              <div class="chip" onclick="chipAsk(this)">What subscriptions am I paying?</div>
+              <div class="chip" onclick="chipAsk(this)">Any suspicious or unusual transactions?</div>
+              <div class="chip" onclick="chipAsk(this)">How does my spending compare month to month?</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chatInput"
+            placeholder="Ask about your finances…  (Enter to send)"
+            rows="1" onkeydown="chatKeydown(event)"></textarea>
+          <button class="chat-send" id="chatSendBtn" onclick="sendChat()">SEND</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let files   = [];
+    let batchId = null;
+    let chatBusy = false;
+    let chatHistory = [];        // [{role, content}, ...]
+    let _allTransactions = [];   // full transaction list for search/export
+    let _riskFlags = [];         // lowercase risk flag strings for highlighting
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput  = document.getElementById('fileInput');
+    const processBtn = document.getElementById('processBtn');
+    const fileListEl = document.getElementById('fileList');
+    const errorArea  = document.getElementById('errorArea');
+
+    // ── File handling ──────────────────────────────────────────────────────
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag--over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag--over'));
+    uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag--over'); addFiles(e.dataTransfer.files); });
+    fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+
+    function addFiles(list) {
+      for (const f of list) if (!files.find(x => x.name === f.name)) files.push(f);
+      renderFiles();
+    }
+    function removeFile(i) { files.splice(i, 1); renderFiles(); }
+
+    function fileTagClass(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      if (ext === 'pdf') return 'file-tag-pdf';
+      if (['csv','txt'].includes(ext)) return 'file-tag-csv';
+      if (['jpg','jpeg','png','webp'].includes(ext)) return 'file-tag-img';
+      return 'file-tag-xls';
+    }
+    function fileTagLabel(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      if (ext === 'pdf') return 'PDF';
+      if (['csv','txt'].includes(ext)) return 'CSV';
+      if (['jpg','jpeg','png','webp'].includes(ext)) return 'IMG';
+      return 'XLS';
+    }
+    function fmt(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      return (b/1048576).toFixed(1) + ' MB';
+    }
+
+    function renderFiles() {
+      processBtn.disabled = files.length === 0;
+      if (!files.length) { fileListEl.innerHTML = ''; return; }
+      let h = `<div class="file-list-header"><span>${files.length} file${files.length>1?'s':''} queued</span><span>size</span></div>`;
+      files.forEach((f, i) => {
+        h += `<div class="file-item">
+          <div class="file-item-left">
+            <span class="file-tag ${fileTagClass(f.name)}">${fileTagLabel(f.name)}</span>
+            <span class="file-name">${esc(f.name)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span class="file-size">${fmt(f.size)}</span>
+            <button class="file-remove" onclick="removeFile(${i})">✕</button>
+          </div>
+        </div>`;
+      });
+      fileListEl.innerHTML = h;
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function showErr(m) { errorArea.innerHTML = `<div class="error-block">⚠ ${esc(m)}</div>`; }
+    function clearErr() { errorArea.innerHTML = ''; }
+
+    // ── Tabs ───────────────────────────────────────────────────────────────
+    function switchTab(t) {
+      if (document.getElementById('tab-'+t).classList.contains('tab--disabled')) return;
+      document.querySelectorAll('.tab').forEach(e => e.classList.remove('tab--active'));
+      document.querySelectorAll('.panel').forEach(e => e.classList.remove('panel--active'));
+      document.getElementById('tab-'+t).classList.add('tab--active');
+      document.getElementById('panel-'+t).classList.add('panel--active');
+    }
+
+    // ── Terminal log ───────────────────────────────────────────────────────
+    function log(text, cls) {
+      const out = document.getElementById('logOutput');
+      const el  = document.createElement('div');
+      el.className = 'log-line' + (cls ? ' '+cls : '');
+      el.innerHTML = `<span class="pfx">▸</span>${esc(text)}`;
+      out.appendChild(el);
+      out.scrollTop = out.scrollHeight;
+    }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ── Live ticker — animated log line that cycles messages while waiting ──
+    let _tickerInterval = null;
+    let _tickerEl = null;
+
+    function startTicker(messages, intervalMs = 2200) {
+      const out = document.getElementById('logOutput');
+      _tickerEl = document.createElement('div');
+      _tickerEl.className = 'log-line active';
+      _tickerEl.innerHTML = `<span class="pfx">▸</span><span class="tick-text">${esc(messages[0])}</span><span class="log-pulse"></span>`;
+      out.appendChild(_tickerEl);
+      out.scrollTop = out.scrollHeight;
+
+      let i = 1;
+      _tickerInterval = setInterval(() => {
+        const msg = messages[i % messages.length];
+        _tickerEl.querySelector('.tick-text').textContent = msg;
+        out.scrollTop = out.scrollHeight;
+        i++;
+      }, intervalMs);
+    }
+
+    function stopTicker(finalText, cls) {
+      if (_tickerInterval) { clearInterval(_tickerInterval); _tickerInterval = null; }
+      if (_tickerEl) {
+        _tickerEl.className = 'log-line' + (cls ? ' '+cls : '');
+        _tickerEl.innerHTML = `<span class="pfx">▸</span>${esc(finalText)}`;
+        _tickerEl = null;
+      }
+    }
+
+    // ── Processing ─────────────────────────────────────────────────────────
+    async function processFiles() {
+      if (!files.length) return;
+      clearErr(); processBtn.disabled = true;
+
+      document.getElementById('tab-analysis').classList.remove('tab--disabled');
+      switchTab('analysis');
+      document.getElementById('logOutput').innerHTML = '';
+      document.getElementById('terminalWindow').style.display = '';
+      document.getElementById('results').classList.remove('results--visible');
+
+      try {
+        // Step 1: Upload raw files
+        log('UPLOADING FILES...');
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        const upRes = await fetch('/api/v1/uploads', { method:'POST', body:fd });
+        if (!upRes.ok) { const e = await upRes.json().catch(()=>({})); throw new Error(e.detail || 'Upload failed'); }
+        const upData = await upRes.json();
+        batchId = upData.batch_id;
+        log(`STORED ${upData.file_count} FILE(S)  [batch ${batchId.slice(0,8)}…]`, 'ok');
+
+        // Step 2: Extract + normalize
+        startTicker([
+          'EXTRACTING TEXT FROM STATEMENTS — CALLING GEMINI VISION...',
+          'READING DOCUMENT STRUCTURE — DETECTING TABLE LAYOUT...',
+          'IDENTIFYING TRANSACTION COLUMNS — DATE · AMOUNT · DESCRIPTION...',
+          '// ACTING LIKE A BANK TELLER TO WASTE YOUR TIME...',
+          'PARSING DATE FORMATS — NORMALISING TO ISO 8601...',
+          'DETECTING CURRENCY FROM ACCOUNT HEADER AND BANK IDENTIFIERS...',
+          'CROSS-REFERENCING BANK NAMES — HDFC · HANG SENG · DBS · ICICI...',
+          '// WHY DID THE ATM BREAK UP WITH THE CREDIT CARD? TOO MANY CHARGES...',
+          'EXTRACTING DEBIT AND CREDIT ENTRIES...',
+          'NORMALISING AMOUNT SIGNS — DEBIT NEGATIVE · CREDIT POSITIVE...',
+          'AI CATEGORISING TRANSACTIONS — DINING · TRANSPORT · UTILITIES...',
+          '// CALCULATING HOW MUCH COFFEE YOUR PAYCHECK IS WORTH...',
+          'FETCHING LIVE EXCHANGE RATES — EUR BASE VIA ECB...',
+          'CONVERTING AMOUNTS TO USD — PRESERVING ORIGINAL CURRENCY...',
+          '// ASKING GEMINI TO JUDGE YOUR FINANCIAL DECISIONS. IT IS JUDGING...',
+          'VALIDATING TRANSACTION RECORDS — CHECKING FOR GAPS...',
+          'WRITING TRANSACTIONS TO SESSION DATABASE...',
+        ]);
+        const recRes = await fetch('/api/v1/pipeline/reconcile', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ batch_id: batchId }),
+        });
+        if (!recRes.ok) { stopTicker('EXTRACTION FAILED', 'err'); const e = await recRes.json().catch(()=>({})); throw new Error(e.detail || 'Extraction failed'); }
+        const recData = await recRes.json();
+        stopTicker(`EXTRACTED ${recData.transaction_count} TRANSACTIONS — NORMALISED TO USD`, 'ok');
+
+        if (recData.transaction_count === 0) {
+          throw new Error('No transactions could be extracted. Are the files bank statements?');
+        }
+
+        // Step 3: ADK agent analysis
+        startTicker([
+          'RUNNING ADK AGENT — GOOGLE AGENT DEVELOPMENT KIT...',
+          'TOOL CALL [1/4] → get_summary_metrics — COMPUTING INCOME · EXPENSES · NET FLOW...',
+          '// WHY IS MONEY CALLED DOUGH? BECAUSE WE ALL KNEAD IT...',
+          'TOOL CALL [2/4] → get_reconciliation_flags — SCANNING FOR ANOMALIES...',
+          'DETECTING DUPLICATE TRANSACTIONS WITHIN 48H WINDOW...',
+          'CHECKING FOR LARGE TRANSACTION OUTLIERS — STATISTICAL ANALYSIS...',
+          '// INFORMING GEMINI OF YOUR QUESTIONABLE FINANCIAL DECISIONS...',
+          'TOOL CALL [3/4] → get_recurring_patterns — GROUPING BY DESCRIPTION...',
+          'IDENTIFYING SUBSCRIPTIONS · RENT · SALARY CYCLES...',
+          'ESTIMATING NEXT EXPECTED DATES — CONFIDENCE SCORING...',
+          '// COUNTING HOW MANY TIMES YOU SAID "TREAT YOURSELF" THIS MONTH...',
+          'TOOL CALL [4/4] → get_period_comparison — MONTH-OVER-MONTH DELTA...',
+          'SYNTHESISING FINDINGS — GEMINI 2.5 FLASH NARRATIVE ENGINE...',
+          'COMPOSING FINANCIAL STORY — INSIGHTS · RISKS · ACTION ITEMS...',
+          '// PREPARING REPORT. RESULTS MAY CAUSE EXISTENTIAL REFLECTION...',
+        ], 2800);
+        const narRes = await fetch('/api/v1/agent/narrative', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ batch_id: batchId }),
+        });
+        if (!narRes.ok) { stopTicker('AGENT ANALYSIS FAILED', 'err'); const e = await narRes.json().catch(()=>({})); throw new Error(e.detail || 'Agent analysis failed'); }
+        const narData = await narRes.json();
+        stopTicker('FINANCIAL NARRATIVE GENERATED ///', 'ok');
+
+        // Step 4: Fetch transaction line items
+        const txnRes = await fetch(`/api/v1/transactions?batch_id=${batchId}&limit=500`);
+        const txnData = txnRes.ok ? await txnRes.json() : { transactions: [] };
+
+        log('ANALYSIS COMPLETE ///', 'done');
+        await sleep(500);
+
+        document.getElementById('terminalWindow').style.display = 'none';
+        renderResults(narData, txnData.transactions || []);
+        unlockChat();
+
+      } catch (err) {
+        log('ERROR: ' + err.message, 'err');
+        showErr(err.message);
+        setTimeout(() => {
+          switchTab('upload');
+          document.getElementById('tab-analysis').classList.add('tab--disabled');
+          processBtn.disabled = false;
+        }, 3500);
+      }
+    }
+
+    // ── Render results ─────────────────────────────────────────────────────
+    function unwrap(data) {
+      return (data.narrative && typeof data.narrative === 'object') ? data.narrative : data;
+    }
+    function money(v) {
+      if (v == null || isNaN(v)) return '—';
+      const a = Math.abs(v), s = v < 0 ? '-' : '';
+      if (a >= 1e6) return s+'$'+(a/1e6).toFixed(2)+'M';
+      if (a >= 1000) return s+'$'+(a/1000).toFixed(1)+'K';
+      return s+'$'+a.toFixed(0);
+    }
+    function moneyFull(v) {
+      if (v == null || isNaN(v)) return '—';
+      const a = Math.abs(v), s = v < 0 ? '-' : '+';
+      return (v < 0 ? '-' : '+') + '$' + a.toFixed(2);
+    }
+
+    function renderResults(rawData, transactions) {
+      const data = unwrap(rawData);
+      const s    = data.summary_stats || {};
+      const net  = s.net_cash_flow || 0;
+      const sav  = s.savings_rate_pct || 0;
+      const trend = s.spending_trend || 'stable';
+      const trendStyle = trend==='up' ? 'color:var(--red-bright)' : trend==='down' ? 'color:var(--green-bright)' : 'color:var(--amber)';
+
+      // Stats
+      document.getElementById('statsGrid').innerHTML = [
+        { label:'Total Income',   val:money(s.total_income),   cls:'pos', sub:'Credits detected' },
+        { label:'Total Expenses', val:money(s.total_expenses), cls:'neg', sub:'Debits detected' },
+        { label:'Net Cash Flow',  val:money(net),              cls:net>=0?'pos':'neg', sub:net>=0?'Positive period':'Deficit period' },
+        { label:'Savings Rate',   val:sav.toFixed(1)+'%',      cls:sav>=0?'pos':'neg', sub:`<span style="${trendStyle}">Trend: ${trend}</span>` },
+      ].map((c,i) => `
+        <div class="stat-card" style="animation-delay:${i*0.06}s">
+          <div class="stat-label">${c.label}</div>
+          <div class="stat-value ${c.cls}">${c.val}</div>
+          <div class="stat-sub">${c.sub}</div>
+        </div>`).join('');
+
+      // Transaction table
+      _allTransactions = transactions;
+      _riskFlags = (data.risk_flags || []).map(r =>
+        typeof r === 'string' ? r.toLowerCase() : (r.description||r.message||'').toLowerCase()
+      );
+      document.getElementById('txnSearch').value = '';
+      if (transactions.length > 0) {
+        renderTxnRows(transactions);
+        document.getElementById('txnWrap').style.display = 'flex';
+      } else {
+        document.getElementById('txnWrap').style.display = 'none';
+      }
+
+      // Category trend chart
+      renderChart(transactions);
+
+      // Narrative
+      document.getElementById('narrativeBody').textContent = data.narrative || 'No narrative available.';
+
+      // Insights
+      const ins = data.insights || [];
+      document.getElementById('insightsList').innerHTML = ins.length
+        ? ins.map((t,i) => `<div class="insight-row"><span class="ins-num">[${String(i+1).padStart(2,'0')}]</span><span>${esc(String(t))}</span></div>`).join('')
+        : `<div style="color:var(--text-dim);font-size:12px;padding:8px 0">No insights returned.</div>`;
+
+      // Actions
+      const acts = data.action_items || [];
+      document.getElementById('actionsRow').innerHTML = acts.length
+        ? acts.map(a => `<div class="action-card"><div class="priority-tag p-${esc(a.priority||'LOW')}">${esc(a.priority||'LOW')}</div><div class="action-body">${esc(a.action||'')}</div></div>`).join('')
+        : `<div class="action-card"><div class="action-body" style="color:var(--text-dim)">No recommendations.</div></div>`;
+
+      // Risk flags — handle both string and object entries
+      const risks = data.risk_flags || [];
+      const riskStrings = risks.map(r => {
+        if (typeof r === 'string') return r;
+        if (typeof r === 'object' && r !== null) {
+          return r.description || r.message || r.flag_type || JSON.stringify(r);
+        }
+        return String(r);
+      });
+
+      document.getElementById('riskSection').innerHTML = riskStrings.length
+        ? `<div class="risk-block">
+            <div class="block-title" style="color:var(--red-bright);margin-bottom:12px">Risk Flags (${riskStrings.length})</div>
+            ${riskStrings.map(r => `<div class="risk-item"><span class="risk-icon">⚑</span><span>${esc(r)}</span></div>`).join('')}
+           </div>`
+        : `<div class="risk-block clear"><div class="block-title" style="color:var(--green-bright);margin-bottom:0">No Risk Flags Detected</div></div>`;
+
+      document.getElementById('results').classList.add('results--visible');
+    }
+
+    // ── Transaction table helpers ───────────────────────────────────────────
+    function txnRow(t) {
+      const isCredit = t.transaction_type === 'credit' || t.amount > 0;
+      const amtCls   = isCredit ? 'cr' : 'dr';
+      const usdStr   = (isCredit ? '+' : '-') + '$' + Math.abs(t.amount).toFixed(2);
+      const cur      = (t.original_currency || 'USD').toUpperCase();
+      const origStr  = (cur !== 'USD' && t.original_amount != null)
+        ? `<span class="txn-orig-cur">${cur} ${Math.abs(t.original_amount).toLocaleString(undefined,{maximumFractionDigits:2})}</span>`
+        : '';
+      const display  = t.clean_name || t.description;
+      // Flag icon if any risk flag text mentions this transaction's description
+      const descLow  = t.description.toLowerCase();
+      const isFlagged = _riskFlags.some(f => f && descLow && (f.includes(descLow.slice(0,15)) || descLow.includes(f.slice(0,15))));
+      const flagIcon  = isFlagged ? `<span class="txn-flag" title="Flagged by reconciliation analysis">⚑</span>` : '';
+      return `<div class="txn-row">
+        <span class="txn-date">${esc(t.date)}</span>
+        <span class="txn-desc" title="${esc(t.description)}">${esc(display)}${flagIcon}</span>
+        <span class="txn-cat">${esc(t.category||'—')}</span>
+        <span class="txn-amt ${amtCls}">${usdStr}${origStr}</span>
+      </div>`;
+    }
+
+    function renderTxnRows(txns) {
+      document.getElementById('txnBody').innerHTML = txns.map(txnRow).join('');
+      document.getElementById('txnCountText').textContent =
+        txns.length === _allTransactions.length
+          ? `${txns.length} transactions · sorted by date descending`
+          : `${txns.length} of ${_allTransactions.length} transactions`;
+    }
+
+    function filterTxns() {
+      const q = document.getElementById('txnSearch').value.toLowerCase().trim();
+      if (!q) { renderTxnRows(_allTransactions); return; }
+      const filtered = _allTransactions.filter(t =>
+        (t.clean_name || t.description || '').toLowerCase().includes(q) ||
+        (t.category || '').toLowerCase().includes(q) ||
+        (t.date || '').includes(q)
+      );
+      renderTxnRows(filtered);
+    }
+
+    function exportCSV() {
+      if (!_allTransactions.length) return;
+      const header = ['Date','Description','Clean Name','Category','Amount (USD)','Original Amount','Original Currency','Type','Source'];
+      const rows = _allTransactions.map(t => [
+        t.date, `"${(t.description||'').replace(/"/g,'""')}"`,
+        `"${(t.clean_name||'').replace(/"/g,'""')}"`,
+        t.category||'', t.amount.toFixed(2),
+        t.original_amount != null ? t.original_amount.toFixed(2) : '',
+        t.original_currency||'USD', t.transaction_type||'',
+        `"${(t.source_account||'').replace(/"/g,'""')}"`
+      ].join(','));
+      const csv = [header.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `recon_transactions_${batchId?.slice(0,8)||'export'}.csv`;
+      a.click();
+    }
+
+    function chipAsk(el) {
+      const input = document.getElementById('chatInput');
+      input.value = el.textContent;
+      sendChat();
+    }
+
+    // ── Category trend chart ────────────────────────────────────────────────
+    let _spendChart = null;
+    const CHART_COLORS = ['#F0A500','#1DB87A','#D94040','#4A9EE8','#B87ADB','#E87A4A','#7AE8D4','#E8D47A'];
+
+    function renderChart(transactions) {
+      const section = document.getElementById('chartSection');
+      if (!transactions || transactions.length === 0) { section.style.display = 'none'; return; }
+
+      // Only expense transactions (negative amounts)
+      const expenses = transactions.filter(t => t.amount < 0);
+      if (expenses.length === 0) { section.style.display = 'none'; return; }
+
+      // Find top 6 categories by total spend
+      const catTotals = {};
+      expenses.forEach(t => {
+        const c = t.category || 'Other';
+        catTotals[c] = (catTotals[c] || 0) + Math.abs(t.amount);
+      });
+      const topCats = Object.entries(catTotals)
+        .sort((a,b) => b[1]-a[1]).slice(0,6).map(e => e[0]);
+
+      // Collect sorted unique dates
+      const allDates = [...new Set(expenses.map(t => t.date))].sort();
+
+      // Aggregate spend per date per category
+      const datasets = topCats.map((cat, i) => {
+        const data = allDates.map(date => {
+          const total = expenses
+            .filter(t => t.date === date && (t.category || 'Other') === cat)
+            .reduce((s, t) => s + Math.abs(t.amount), 0);
+          return total > 0 ? parseFloat(total.toFixed(2)) : null;
+        });
+        return {
+          label: cat,
+          data,
+          borderColor: CHART_COLORS[i],
+          backgroundColor: CHART_COLORS[i] + '18',
+          borderWidth: 1.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: CHART_COLORS[i],
+          tension: 0.35,
+          spanGaps: true,
+          fill: false,
+        };
+      });
+
+      // Legend — built after chart so we can wire click handlers
+      const legendEl = document.getElementById('chartLegend');
+      legendEl.innerHTML = topCats
+        .map((c,i) => `<div class="legend-item" data-idx="${i}"><span class="legend-dot" style="background:${CHART_COLORS[i]}"></span>${esc(c)}</div>`)
+        .join('');
+      legendEl.querySelectorAll('.legend-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const idx = parseInt(item.dataset.idx);
+          const visible = _spendChart.isDatasetVisible(idx);
+          _spendChart.setDatasetVisibility(idx, !visible);
+          _spendChart.update();
+          item.classList.toggle('hidden', visible);
+        });
+      });
+
+      section.style.display = '';
+
+      // Destroy old chart if any
+      if (_spendChart) { _spendChart.destroy(); _spendChart = null; }
+
+      const ctx = document.getElementById('spendChart').getContext('2d');
+      _spendChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: allDates, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0E1117',
+              borderColor: '#2A2D35',
+              borderWidth: 1,
+              titleColor: '#F0A500',
+              bodyColor: '#C8CAD0',
+              titleFont: { family: 'JetBrains Mono', size: 10 },
+              bodyFont:  { family: 'JetBrains Mono', size: 11 },
+              padding: 10,
+              callbacks: {
+                label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—'}`,
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#1A1D24' },
+              ticks: { color: '#5A5E6B', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 10, maxRotation: 0 },
+              border: { color: '#2A2D35' },
+            },
+            y: {
+              grid: { color: '#1A1D24' },
+              ticks: { color: '#5A5E6B', font: { family: 'JetBrains Mono', size: 9 }, callback: v => '$' + v.toFixed(0) },
+              border: { color: '#2A2D35' },
+              beginAtZero: true,
+            }
+          }
+        }
+      });
+    }
+
+    // ── Markdown → plain text for chat ─────────────────────────────────────
+    function stripMarkdown(text) {
+      return text
+        .replace(/\*\*(.+?)\*\*/g, '$1')       // bold
+        .replace(/\*(.+?)\*/g, '$1')            // italic
+        .replace(/^#{1,6}\s+/gm, '')            // headings
+        .replace(/`{1,3}([^`]+)`{1,3}/g, '$1') // code
+        .replace(/^\s*[-*+]\s+/gm, '• ')        // bullets
+        .replace(/^\s*\d+\.\s+/gm, '  ')        // numbered lists
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
+        .replace(/\n{3,}/g, '\n\n')             // excess blank lines
+        .trim();
+    }
+
+    // ── Chat ───────────────────────────────────────────────────────────────
+    function unlockChat() {
+      document.getElementById('tab-chat').classList.remove('tab--disabled');
+      document.getElementById('chatLocked').style.display  = 'none';
+      document.getElementById('chatUnlocked').style.display = 'flex';
+    }
+    function lockChat() {
+      document.getElementById('tab-chat').classList.add('tab--disabled');
+      document.getElementById('chatLocked').style.display  = 'flex';
+      document.getElementById('chatUnlocked').style.display = 'none';
+    }
+
+    function nowTime() { return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+
+    function appendMsg(role, text, thinking) {
+      document.getElementById('chatPlaceholder')?.remove();
+      const msgs = document.getElementById('chatMessages');
+      const el   = document.createElement('div');
+      el.className = 'msg ' + role;
+      if (thinking) el.id = 'thinking-indicator';
+      el.innerHTML = `
+        <div class="msg-avatar">${role==='user'?'YOU':'AI'}</div>
+        <div class="msg-body">
+          <div class="msg-header">
+            <span class="msg-name">${role==='user'?'YOU':'RECON'}</span>
+            <span class="msg-time">${nowTime()}</span>
+          </div>
+          ${thinking
+            ? `<div class="msg-thinking"><span class="think-dot"></span><span class="think-dot"></span><span class="think-dot"></span></div>`
+            : `<div class="msg-text">${esc(role === 'agent' ? stripMarkdown(text) : text)}</div>`
+          }
+        </div>`;
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+      return el;
+    }
+
+    function chatKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const query = input.value.trim();
+      if (!query || chatBusy || !batchId) return;
+
+      chatBusy = true;
+      document.getElementById('chatSendBtn').disabled = true;
+      input.value = ''; input.style.height = 'auto';
+
+      appendMsg('user', query);
+      const thinkEl = appendMsg('agent', '', true);
+
+      try {
+        const res = await fetch('/api/v1/agent/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batch_id: batchId, query, history: chatHistory }),
+        });
+        if (!res.ok) throw new Error('Chat error ' + res.status);
+        const data = await res.json();
+        const answer = data.response || 'No response.';
+        thinkEl.remove();
+        appendMsg('agent', answer);
+        // Update history after successful round-trip
+        chatHistory.push({ role: 'user', content: query });
+        chatHistory.push({ role: 'assistant', content: answer });
+        // Keep last 20 messages to stay within token budget
+        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+      } catch (err) {
+        thinkEl.remove();
+        appendMsg('agent', '⚠ Error: ' + err.message);
+      } finally {
+        chatBusy = false;
+        document.getElementById('chatSendBtn').disabled = false;
+        input.focus();
+      }
+    }
+
+    // ── Wipe ───────────────────────────────────────────────────────────────
+    async function wipeData() {
+      if (!confirm('Wipe ALL session data from the database? This cannot be undone.')) return;
+      try {
+        await fetch('/api/v1/admin/reset', { method: 'POST' });
+        startOver();
+      } catch (e) {
+        alert('Wipe failed: ' + e.message);
+      }
+    }
+
+    // ── Reset ──────────────────────────────────────────────────────────────
+    function startOver() {
+      files = []; batchId = null; chatHistory = []; _allTransactions = []; _riskFlags = [];
+      renderFiles(); clearErr(); processBtn.disabled = true;
+      lockChat();
+      document.getElementById('tab-analysis').classList.add('tab--disabled');
+      document.getElementById('results').classList.remove('results--visible');
+      document.getElementById('logOutput').innerHTML = '';
+      document.getElementById('terminalWindow').style.display = '';
+      document.getElementById('chatMessages').innerHTML = `
+        <div class="chat-empty" id="chatPlaceholder">
+          <div class="chat-empty-icon">◈</div>
+          <div class="chat-empty-title">ASK ANYTHING</div>
+          <div class="chat-empty-sub">Gemini has your full transaction history. Ask follow-up questions.</div>
+        </div>`;
+      switchTab('upload');
+    }
+  </script>
+</body>
+</html>
