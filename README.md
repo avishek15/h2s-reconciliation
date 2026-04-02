@@ -78,56 +78,135 @@ curl -X POST $BASE/api/v1/agent/narrative \
 
 ---
 
-## Deploy to Cloud Run
+## Deploy to Google Cloud Run (CLI)
 
-### Prerequisites
+The container image is built for **Vertex AI** (see `Dockerfile`: `GOOGLE_GENAI_USE_VERTEXAI=1`, SQLite under `/tmp`). The `MoneyStoryAgent` uses `google.genai` with `vertexai=True`, so the Cloud Run service account must be allowed to call Vertex AI and `GOOGLE_CLOUD_PROJECT` must be set at deploy time.
+
+### 1. Prerequisites
+
+Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate:
 
 ```bash
 gcloud auth login
+gcloud auth application-default login   # optional; helps local Vertex / ADC tooling
 gcloud config set project YOUR_PROJECT_ID
-gcloud services enable run.googleapis.com aiplatform.googleapis.com
 ```
 
-### Deploy (source deploy — no Docker needed locally)
+Replace `YOUR_PROJECT_ID` with your GCP project ID (`gcloud projects list`).
+
+### 2. Enable APIs (one time per project)
 
 ```bash
-export PROJECT_ID=your-project-id
+export PROJECT_ID=$(gcloud config get-value project)
+
+gcloud services enable \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  aiplatform.googleapis.com \
+  --project "$PROJECT_ID"
+```
+
+### 3. Grant Vertex AI access to the Cloud Run runtime (one time)
+
+Cloud Run defaults to the Compute Engine default service account. It needs permission to use Vertex AI:
+
+```bash
+export PROJECT_ID=$(gcloud config get-value project)
+export PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+export RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${RUNTIME_SA}" \
+  --role="roles/aiplatform.user"
+```
+
+If you deploy with `--service-account`, grant `roles/aiplatform.user` to **that** account instead.
+
+### 4. Deploy from source (recommended)
+
+From the **repository root** (same directory as `Dockerfile`). Cloud Build will build the image (using `Dockerfile` when present) and deploy to Cloud Run:
+
+```bash
+export PROJECT_ID=$(gcloud config get-value project)
 export REGION=us-central1
 export SERVICE=money-reconciliation-agent
 
-gcloud run deploy $SERVICE \
+gcloud run deploy "$SERVICE" \
+  --project "$PROJECT_ID" \
   --source . \
   --platform managed \
-  --region $REGION \
+  --region "$REGION" \
   --allow-unauthenticated \
   --memory 2Gi \
   --cpu 2 \
   --timeout 300 \
-  --min-instances 1 \
-  --set-env-vars "GOOGLE_API_KEY=your_gemini_key_here,APP_ENV=production"
+  --min-instances 0 \
+  --max-instances 10 \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=us-central1,APP_ENV=production"
 ```
 
-### Verify
+- Use `--min-instances 1` if you want to avoid cold starts (adds cost).
+- Omit `--allow-unauthenticated` if you only want IAM-authenticated access; then callers need a Google identity + `roles/run.invoker`.
+
+### 5. Deploy a pre-built image (optional)
+
+Use this when you want an explicit image tag in Artifact Registry (e.g. CI/CD):
 
 ```bash
-# Get the service URL
-gcloud run services describe $SERVICE --region $REGION --format='value(status.url)'
+export PROJECT_ID=$(gcloud config get-value project)
+export REGION=us-central1
+export SERVICE=money-reconciliation-agent
+export REPO=h2s-reconciliation
+export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${SERVICE}:$(git rev-parse --short HEAD 2>/dev/null || echo manual)"
 
-# Health check
-curl https://YOUR_SERVICE_URL.run.app/health
+gcloud artifacts repositories describe "$REPO" --location "$REGION" --project "$PROJECT_ID" >/dev/null 2>&1 || \
+  gcloud artifacts repositories create "$REPO" \
+    --repository-format=docker \
+    --location "$REGION" \
+    --project "$PROJECT_ID" \
+    --description="Images for ${SERVICE}"
+
+gcloud builds submit --project "$PROJECT_ID" --tag "$IMAGE" .
+
+gcloud run deploy "$SERVICE" \
+  --project "$PROJECT_ID" \
+  --image "$IMAGE" \
+  --platform managed \
+  --region "$REGION" \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --cpu 2 \
+  --timeout 300 \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=us-central1,APP_ENV=production"
 ```
+
+### 6. Verify
+
+```bash
+export REGION=us-central1
+export SERVICE=money-reconciliation-agent
+
+URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
+echo "$URL"
+curl -sS "${URL}/health"
+```
+
+Open `${URL}/docs` for Swagger UI or `${URL}/ui` for the static UI.
 
 ---
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|---|---|---|
-| `GOOGLE_API_KEY` | Gemini API key from [AI Studio](https://aistudio.google.com/apikey) | Yes |
-| `GOOGLE_CLOUD_PROJECT` | GCP project ID | For Vertex AI |
-| `GOOGLE_CLOUD_LOCATION` | Region (default: `us-central1`) | No |
-| `DATABASE_URL` | SQLite path (auto-set for Cloud Run) | No |
-| `APP_ENV` | `development` or `production` | No |
+| Variable | Description | Local | Cloud Run |
+|---|---|---|---|
+| `GOOGLE_CLOUD_PROJECT` | GCP project ID (Vertex) | Set in `.env` for the agent | **Required** at deploy (`--set-env-vars`) |
+| `GOOGLE_CLOUD_LOCATION` | Vertex region (e.g. `us-central1`) | Optional in `.env` | Set in Dockerfile / deploy vars |
+| `GOOGLE_API_KEY` | Gemini via AI Studio | Optional; not used by Vertex path in container | Not required when using Vertex image defaults |
+| `DATABASE_URL` | SQLite URL | Default file path | Dockerfile sets writable `/tmp/reconciliation.db` |
+| `APP_ENV` | `development` or `production` | Optional | Set `production` in deploy |
+| `MODEL` | Gemini model id | Optional (`agent/money_story_agent.py`) | Optional override |
+| `LOG_LEVEL` | Logging verbosity | Optional | Optional |
 
 ---
 
