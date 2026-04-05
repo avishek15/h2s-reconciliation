@@ -48,7 +48,8 @@ class BatchOrchestratorTool:
         Returns:
             dict: Pipeline result with narrative, insights, actions, etc.
         """
-        if db is None:
+        owns_db = db is None
+        if owns_db:
             db = AsyncSessionLocal()
 
         try:
@@ -205,5 +206,5 @@ class BatchOrchestratorTool:
             }
 
         finally:
-            if db:
+            if owns_db and db:
                 await db.close()

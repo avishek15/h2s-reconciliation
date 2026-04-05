@@ -1,11 +1,12 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models import ReconcileRequest, ReconcileResponse
-from core.database import BatchFile, Transaction, UploadBatch, get_db
+from core.auth import get_current_user, get_owned_batch
+from core.database import BatchFile, Transaction, User, get_db
 from core.exchange import batch_to_usd
 from core.ingestion import extract_text, normalize_to_transactions
 
@@ -13,7 +14,11 @@ router = APIRouter()
 
 
 @router.post("/reconcile", response_model=ReconcileResponse, tags=["pipeline"])
-async def reconcile(request: ReconcileRequest, db: AsyncSession = Depends(get_db)):
+async def reconcile(
+    request: ReconcileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Phase 1 + 2 of the pipeline.
 
@@ -24,12 +29,12 @@ async def reconcile(request: ReconcileRequest, db: AsyncSession = Depends(get_db
 
     Session isolation: all queries are filtered by batch_id.
     """
-    result = await db.execute(
-        select(UploadBatch).where(UploadBatch.batch_id == request.batch_id)
-    )
-    batch = result.scalar_one_or_none()
+    batch = await get_owned_batch(db, request.batch_id, current_user.id)
     if not batch:
-        raise HTTPException(status_code=404, detail=f"Batch {request.batch_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {request.batch_id} not found or access denied",
+        )
 
     files_result = await db.execute(
         select(BatchFile).where(BatchFile.batch_id == request.batch_id)

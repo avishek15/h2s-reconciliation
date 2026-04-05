@@ -30,7 +30,8 @@ class GoogleDriveSyncService:
             profile_id: Profile ID to sync
             db: Database session (creates new if not provided)
         """
-        if db is None:
+        owns_db = db is None
+        if owns_db:
             db = AsyncSessionLocal()
 
         try:
@@ -40,7 +41,7 @@ class GoogleDriveSyncService:
             )
             profile = result.scalar_one_or_none()
 
-            if not profile or not profile.google_drive_access_token:
+            if not profile or not profile.google_drive_access_token or not profile.google_drive_folder_id:
                 print(f"Profile {profile_id} not found or missing Google Drive token")
                 return
 
@@ -137,7 +138,7 @@ class GoogleDriveSyncService:
             except Exception as inner:
                 print(f"Error marking batch failed for profile {profile_id}: {inner}")
         finally:
-            if db:
+            if owns_db and db:
                 await db.close()
 
     @staticmethod
@@ -160,13 +161,17 @@ class GoogleDriveSyncService:
             traceback.print_exc()
 
     @staticmethod
-    async def sync_all_profiles():
+    async def sync_all_profiles(user_id: Optional[str] = None):
         """
         Sync all user profiles (can be called periodically).
         """
         db = AsyncSessionLocal()
         try:
-            result = await db.execute(select(Profile))
+            query = select(Profile)
+            if user_id:
+                query = query.where(Profile.user_id == user_id)
+
+            result = await db.execute(query)
             profiles = result.scalars().all()
 
             for profile in profiles:

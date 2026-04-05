@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
-from core.database import User, get_db
+from core.database import Profile, UploadBatch, User, get_db
 
 
 # ── Models ──────────────────────────────────────────────────────────────────
@@ -122,3 +122,25 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_owned_profile(db: AsyncSession, profile_id: str, user_id: str) -> Optional[Profile]:
+    """Return a profile only if it belongs to the given user."""
+    result = await db.execute(
+        select(Profile).where(
+            (Profile.id == profile_id) & (Profile.user_id == user_id)
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_owned_batch(db: AsyncSession, batch_id: str, user_id: str) -> Optional[UploadBatch]:
+    """Return a batch only if it belongs to one of the user's profiles."""
+    result = await db.execute(
+        select(UploadBatch)
+        .join(Profile, UploadBatch.profile_id == Profile.id)
+        .where(
+            (UploadBatch.batch_id == batch_id) & (Profile.user_id == user_id)
+        )
+    )
+    return result.scalar_one_or_none()

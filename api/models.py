@@ -28,8 +28,8 @@ class AuthResponse(BaseModel):
 
 class CreateProfileRequest(BaseModel):
     profile_name: str
-    google_drive_folder_id: str
-    google_drive_folder_name: str
+    google_drive_folder_id: Optional[str] = None
+    google_drive_folder_name: Optional[str] = None
 
 
 class ProfileResponse(BaseModel):

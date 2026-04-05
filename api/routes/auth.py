@@ -3,7 +3,13 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models import SignupRequest, LoginRequest, AuthResponse, CreateProfileRequest, ProfileResponse, UserProfilesResponse
-from core.auth import create_access_token, hash_password, verify_password, get_current_user
+from core.auth import (
+    create_access_token,
+    get_current_user,
+    get_owned_profile,
+    hash_password,
+    verify_password,
+)
 from core.database import (
     AIReport,
     BatchFile,
@@ -65,7 +71,9 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     Authenticate with username and password, returns JWT token.
     """
     result = await db.execute(
-        select(User).where(User.username == request.username)
+        select(User).where(
+            (User.username == request.username) | (User.email == request.username)
+        )
     )
     user = result.scalar_one_or_none()
 
@@ -97,11 +105,27 @@ async def create_profile(
     """
     Create a new profile with Google Drive folder information.
     """
+    profile_name = request.profile_name.strip()
+    folder_id = (request.google_drive_folder_id or "").strip() or None
+    folder_name = (request.google_drive_folder_name or "").strip() or None
+
+    if not profile_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Profile name is required",
+        )
+
+    if bool(folder_id) != bool(folder_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide both Google Drive folder ID and folder name, or leave both blank",
+        )
+
     profile = Profile(
         user_id=current_user.id,
-        profile_name=request.profile_name,
-        google_drive_folder_id=request.google_drive_folder_id,
-        google_drive_folder_name=request.google_drive_folder_name,
+        profile_name=profile_name,
+        google_drive_folder_id=folder_id,
+        google_drive_folder_name=folder_name,
     )
     db.add(profile)
     await db.commit()
@@ -158,12 +182,7 @@ async def get_profile(
     """
     Get a specific profile by ID (only if owned by current user).
     """
-    result = await db.execute(
-        select(Profile).where(
-            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
-        )
-    )
-    profile = result.scalar_one_or_none()
+    profile = await get_owned_profile(db, profile_id, current_user.id)
 
     if not profile:
         raise HTTPException(
@@ -199,6 +218,7 @@ async def get_current_user_info(
             id=p.id,
             profile_name=p.profile_name,
             google_drive_folder_name=p.google_drive_folder_name,
+            connected=p.google_drive_access_token is not None,
             created_at=p.created_at.isoformat(),
             last_synced=p.last_synced.isoformat() if p.last_synced else None,
         )
@@ -222,12 +242,7 @@ async def get_latest_batch_for_profile(
     Get the latest batch for a profile (only if owned by current user).
     """
     # Verify profile belongs to user
-    result = await db.execute(
-        select(Profile).where(
-            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
-        )
-    )
-    profile = result.scalar_one_or_none()
+    profile = await get_owned_profile(db, profile_id, current_user.id)
 
     if not profile:
         raise HTTPException(
@@ -267,12 +282,7 @@ async def delete_profile(
     """
     Delete a profile and all associated batch data for the current user.
     """
-    profile_result = await db.execute(
-        select(Profile).where(
-            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
-        )
-    )
-    profile = profile_result.scalar_one_or_none()
+    profile = await get_owned_profile(db, profile_id, current_user.id)
 
     if not profile:
         raise HTTPException(

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from api.models import ProfileResponse
-from core.auth import get_current_user
+from core.auth import get_current_user, get_owned_profile
 from core.config import settings
 from core.database import User, Profile, get_db
 from core.google_drive import GoogleDriveOAuthFlow, GoogleDriveService
@@ -48,12 +48,7 @@ async def start_google_oauth(
         )
 
     # Verify profile belongs to user
-    result = await db.execute(
-        select(Profile).where(
-            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
-        )
-    )
-    profile = result.scalar_one_or_none()
+    profile = await get_owned_profile(db, profile_id, current_user.id)
 
     if not profile:
         raise HTTPException(
@@ -163,17 +158,18 @@ async def sync_profile(
     Returns immediately and processes in background.
     """
     # Verify profile belongs to user
-    result = await db.execute(
-        select(Profile).where(
-            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
-        )
-    )
-    profile = result.scalar_one_or_none()
+    profile = await get_owned_profile(db, profile_id, current_user.id)
 
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found",
+        )
+
+    if not profile.google_drive_folder_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Profile is missing a Google Drive folder ID",
         )
 
     if not profile.google_drive_access_token:
@@ -206,7 +202,7 @@ async def sync_all_profiles(
     Returns immediately and processes in background.
     """
     if background_tasks:
-        background_tasks.add_task(GoogleDriveSyncService.sync_all_profiles)
+        background_tasks.add_task(GoogleDriveSyncService.sync_all_profiles, current_user.id)
 
     return {
         "status": "syncing",
@@ -225,12 +221,7 @@ async def get_drive_folder_info(
     """
     Get information about the Google Drive folder for a profile.
     """
-    result = await db.execute(
-        select(Profile).where(
-            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
-        )
-    )
-    profile = result.scalar_one_or_none()
+    profile = await get_owned_profile(db, profile_id, current_user.id)
 
     if not profile:
         raise HTTPException(

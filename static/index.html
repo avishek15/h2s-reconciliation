@@ -204,6 +204,28 @@
     .process-btn span { position: relative; z-index: 1; }
     .process-btn:disabled { opacity: .22; cursor: not-allowed; background: transparent; border-color: var(--border-2); color: var(--text-dim); }
     .process-btn:disabled::before { display: none; }
+    .process-btn.process-btn--secondary {
+      padding: 14px;
+      font-size: 14px;
+      letter-spacing: 0.16em;
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green-bright);
+    }
+    .process-btn.process-btn--secondary::before { background: var(--green); }
+    .process-btn.process-btn--secondary:hover:not(:disabled) { color: var(--bg); }
+    .upload-actions { display: grid; gap: 12px; }
+    .profile-context {
+      margin-bottom: 18px;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+    .profile-context strong { color: var(--text-white); }
 
     /* ── Analysis panel ── */
     .terminal {
@@ -810,7 +832,7 @@
   <div class="profile-screen hidden" id="profileScreen">
     <div class="profile-container">
       <div class="profile-title">SELECT PROFILE</div>
-      <div class="profile-sub">// Choose a profile to access your reconciliation dashboard</div>
+      <div class="profile-sub">// Choose a profile to upload statements or sync an attached Drive folder</div>
       <div class="profile-grid" id="profileGrid"></div>
       <button class="new-profile-btn" onclick="createNewProfile()">+ CREATE NEW PROFILE</button>
     </div>
@@ -821,7 +843,7 @@
     <div class="auth-container">
       <div class="auth-logo">
         <div class="auth-logo-word">NEW PROFILE</div>
-        <div class="auth-logo-sub">Connect to Google Drive folder</div>
+        <div class="auth-logo-sub">Google Drive is optional for this profile</div>
       </div>
 
       <form id="createProfileForm" onsubmit="handleCreateProfile(event)">
@@ -833,16 +855,16 @@
 
         <div class="form-group">
           <label class="form-label">Google Drive Folder ID</label>
-          <input type="text" class="form-input" id="newProfileFolderId" placeholder="Paste folder ID here" required>
+          <input type="text" class="form-input" id="newProfileFolderId" placeholder="Optional: paste folder ID here">
           <div style="font-size:10px;color:var(--text-dim);margin-top:5px">
-            Find it in the URL: drive.google.com/drive/folders/<strong>FOLDER_ID_HERE</strong>
+            Optional. Add this only if you want Drive sync for the profile.
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Folder Name (Display)</label>
-          <input type="text" class="form-input" id="newProfileFolderName" placeholder="e.g., Bank Statements 2024" required>
-          <div style="font-size:10px;color:var(--text-dim);margin-top:5px">How you want to see this folder displayed</div>
+          <input type="text" class="form-input" id="newProfileFolderName" placeholder="Optional: e.g., Bank Statements 2024">
+          <div style="font-size:10px;color:var(--text-dim);margin-top:5px">Required only if you provide a folder ID</div>
         </div>
 
         <div class="form-error" id="createProfileError"></div>
@@ -898,7 +920,8 @@
     <!-- ── Upload panel ── -->
     <div class="panel panel--active" id="panel-upload">
       <div class="section-title">UPLOAD STATEMENTS</div>
-      <div class="section-sub">// PDF, CSV, Excel, or image files — Gemini extracts and analyzes your real data</div>
+      <div class="section-sub" id="uploadSub">// PDF, CSV, Excel, or image files — Gemini extracts and analyzes your real data</div>
+      <div class="profile-context" id="profileContext">No profile selected.</div>
 
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" multiple
@@ -913,9 +936,14 @@
       <div class="file-list" id="fileList"></div>
       <div id="errorArea"></div>
 
-      <button class="process-btn" id="processBtn" disabled onclick="processFiles()">
-        <span>INITIALIZE ANALYSIS</span>
-      </button>
+      <div class="upload-actions">
+        <button class="process-btn process-btn--secondary" id="driveSyncBtn" style="display:none" onclick="syncCurrentProfile()">
+          <span>SYNC GOOGLE DRIVE</span>
+        </button>
+        <button class="process-btn" id="processBtn" disabled onclick="processFiles()">
+          <span>INITIALIZE ANALYSIS</span>
+        </button>
+      </div>
     </div>
 
     <!-- ── Analysis panel ── -->
@@ -1047,6 +1075,17 @@
       }
     });
 
+    function setCurrentProfile(profile) {
+      currentProfile = profile || {};
+      if (currentProfile.id) {
+        localStorage.setItem('currentProfile', JSON.stringify(currentProfile));
+      } else {
+        localStorage.removeItem('currentProfile');
+      }
+      updateUserBadge();
+      updateProfileContextUI();
+    }
+
     function showAuthScreen() {
       document.getElementById('authScreen').classList.remove('hidden');
       document.getElementById('profileScreen').classList.add('hidden');
@@ -1073,12 +1112,47 @@
       document.querySelector('.main').style.display = 'block';
       document.getElementById('userInfo').style.display = 'flex';
       updateUserBadge();
+      updateProfileContextUI();
     }
 
     function updateUserBadge() {
       const badge = document.getElementById('userBadge');
       if (badge) {
         badge.textContent = currentUser.username ? `${currentUser.username} [${currentProfile.profile_name || 'no profile'}]` : 'USER';
+      }
+    }
+
+    function updateProfileContextUI() {
+      const context = document.getElementById('profileContext');
+      const uploadSub = document.getElementById('uploadSub');
+      const syncBtn = document.getElementById('driveSyncBtn');
+
+      if (!context || !uploadSub || !syncBtn) return;
+
+      if (!currentProfile.id) {
+        context.textContent = 'No profile selected.';
+        uploadSub.textContent = '// Select a profile to upload files or sync Google Drive';
+        syncBtn.style.display = 'none';
+        return;
+      }
+
+      const profileName = esc(currentProfile.profile_name || 'Unnamed');
+      const folderName = esc(currentProfile.google_drive_folder_name || '');
+      const driveReady = Boolean(currentProfile.connected && currentProfile.google_drive_folder_name);
+      const driveConfigured = Boolean(currentProfile.google_drive_folder_name);
+
+      if (driveReady) {
+        context.innerHTML = `Profile <strong>${profileName}</strong> is active. Drive folder <strong>${folderName}</strong> is ready to sync, or you can upload files manually.`;
+        uploadSub.textContent = '// Upload files manually or sync the attached Google Drive folder';
+        syncBtn.style.display = '';
+      } else if (driveConfigured) {
+        context.innerHTML = `Profile <strong>${profileName}</strong> is active. A Drive folder is configured, but Google Drive is not connected yet.`;
+        uploadSub.textContent = '// Upload files manually now, or connect Google Drive from the profile screen later';
+        syncBtn.style.display = 'none';
+      } else {
+        context.innerHTML = `Profile <strong>${profileName}</strong> is active. This profile is set up for manual uploads only.`;
+        uploadSub.textContent = '// Upload statement files for this profile';
+        syncBtn.style.display = 'none';
       }
     }
 
@@ -1212,6 +1286,12 @@
         if (res.ok) {
           const data = await res.json();
           userProfiles = data.profiles || [];
+          if (currentProfile.id) {
+            const refreshedProfile = userProfiles.find(profile => profile.id === currentProfile.id);
+            setCurrentProfile(refreshedProfile || null);
+          } else {
+            updateProfileContextUI();
+          }
         }
       } catch (err) {
         console.error('Error loading profiles:', err);
@@ -1226,13 +1306,23 @@
       }
 
       grid.innerHTML = userProfiles.map(profile => `
-        <div class="profile-card" onclick="selectProfile('${profile.id}', '${esc(profile.profile_name || '')}')">
+        <div class="profile-card" onclick="selectProfile('${profile.id}')">
           <div class="profile-name">${esc(profile.profile_name || 'Unnamed')}</div>
           <div class="profile-info">
-            📁 ${esc(profile.google_drive_folder_name || 'Not connected')}<br>
-            ${profile.last_synced ? new Date(profile.last_synced).toLocaleDateString() : 'Never synced'}
+            ${profile.connected
+              ? `Drive ready: ${esc(profile.google_drive_folder_name || 'Connected')}`
+              : profile.google_drive_folder_name
+                ? `Drive folder saved: ${esc(profile.google_drive_folder_name)}`
+                : 'Manual uploads only'}<br>
+            ${profile.last_synced
+              ? `Last sync ${new Date(profile.last_synced).toLocaleString()}`
+              : profile.connected
+                ? 'Ready to sync now'
+                : profile.google_drive_folder_name
+                  ? 'Connect Google Drive to enable sync'
+                  : 'Upload files directly to analyze'}
           </div>
-          ${!profile.connected ? 
+          ${(!profile.connected && profile.google_drive_folder_name) ?
             `<button class="connect-gdrive-btn" onclick="event.stopPropagation(); connectGoogleDrive('${profile.id}')" title="Connect Google Drive">🔗 Connect Drive</button>` : 
             ''}
           <button class="delete-profile-btn" onclick="event.stopPropagation(); deleteProfile('${profile.id}', '${esc(profile.profile_name || '')}')" title="Delete profile">Delete</button>
@@ -1258,8 +1348,7 @@
         }
 
         if (currentProfile && currentProfile.id === profileId) {
-          localStorage.removeItem('currentProfile');
-          currentProfile = {};
+          setCurrentProfile(null);
           showProfileScreen();
         }
 
@@ -1271,23 +1360,21 @@
       }
     }
 
-    function selectProfile(profileId, profileName) {
-      console.log('selectProfile called with:', profileId, profileName);
+    function selectProfile(profileId) {
       const profile = userProfiles.find(p => p.id === profileId);
-      if (!profile || !profile.connected) {
-        showStatus('Please connect Google Drive for this profile first.', 'error');
+      if (!profile) {
+        showStatus('Profile not found.', 'error');
         return;
       }
-      currentProfile = { id: profileId, profile_name: profileName };
-      localStorage.setItem('currentProfile', JSON.stringify(currentProfile));
+      setCurrentProfile(profile);
       showMainApp();
-      startOver(); // Reset app state
-      // Enable and switch to analysis tab for sync processing
-      document.getElementById('tab-analysis').classList.remove('tab--disabled');
-      switchTab('analysis');
-      // Trigger sync and load report
-      console.log('Calling syncAndLoadReport...');
-      syncAndLoadReport(profileId);
+      startOver();
+      showStatus(
+        profile.connected
+          ? `Profile "${profile.profile_name}" ready. Upload files or sync Google Drive.`
+          : `Profile "${profile.profile_name}" ready for manual uploads.`,
+        'info'
+      );
     }
 
     async function connectGoogleDrive(profileId) {
@@ -1319,26 +1406,41 @@
       }
     }
 
+    async function syncCurrentProfile() {
+      if (!currentProfile.id) {
+        showStatus('Select a profile before syncing.', 'error');
+        return;
+      }
+      await syncAndLoadReport(currentProfile.id);
+    }
+
     async function syncAndLoadReport(profileId) {
-      console.log('syncAndLoadReport called with profileId:', profileId);
-      console.log('jwtToken is set:', !!jwtToken);
       try {
         // Show loading
         showStatus('Syncing Google Drive files...', 'info');
 
         // Show the results panel and processing indicator
+        document.getElementById('tab-analysis').classList.remove('tab--disabled');
+        switchTab('analysis');
+        document.getElementById('logOutput').innerHTML = '';
+        document.getElementById('terminalWindow').style.display = '';
         document.getElementById('results').classList.add('results--visible');
         showProcessingIndicator('Sync started. Waiting for processing to complete...');
 
-        console.log('Making sync request to:', `/api/v1/profiles/${profileId}/sync`);
         // Trigger sync
         const syncRes = await authFetch(`/api/v1/profiles/${profileId}/sync`, {
           method: 'POST'
         });
-        console.log('Sync response:', syncRes.status, syncRes.statusText);
 
         if (!syncRes.ok) {
-          throw new Error('Failed to start sync');
+          let msg = 'Failed to start sync';
+          try {
+            const data = await syncRes.json();
+            msg = data.detail || msg;
+          } catch (_) {
+            // keep generic message
+          }
+          throw new Error(msg);
         }
 
         // Poll for completion
@@ -1384,36 +1486,28 @@
       } catch (error) {
         console.error('Sync error:', error);
         hideProcessingIndicator();
-        showStatus('Failed to sync and analyze data. Please try again.', 'error');
+        showStatus(`Failed to sync and analyze data: ${error.message}`, 'error');
       }
     }
 
-    async function loadReport(batchId) {
+    async function loadReport(batchIdValue) {
       try {
-        // Load summary report
-        const summaryRes = await authFetch(`/api/v1/reports/summary?batch_id=${batchId}`);
-        if (summaryRes.ok) {
-          const summaryData = await summaryRes.json();
-          displaySummaryReport(summaryData);
-        }
-
-        // Load recurring report
-        const recurringRes = await authFetch(`/api/v1/reports/recurring?batch_id=${batchId}`);
-        if (recurringRes.ok) {
-          const recurringData = await recurringRes.json();
-          displayRecurringReport(recurringData);
-        }
-
-        // Load narrative
+        batchId = batchIdValue;
         const narrativeRes = await authFetch(`/api/v1/agent/narrative`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ batch_id: batchId })
+          body: JSON.stringify({ batch_id: batchIdValue })
         });
-        if (narrativeRes.ok) {
-          const narrativeData = await narrativeRes.json();
-          displayNarrative(narrativeData);
-        }
+        if (!narrativeRes.ok) throw new Error('Failed to load narrative');
+        const narrativeData = await narrativeRes.json();
+
+        const txnRes = await authFetch(`/api/v1/transactions?batch_id=${batchIdValue}&limit=500`);
+        if (!txnRes.ok) throw new Error('Failed to load transactions');
+        const txnData = await txnRes.json();
+
+        document.getElementById('terminalWindow').style.display = 'none';
+        renderResults(narrativeData, txnData.transactions || []);
+        unlockChat();
 
         // Hide processing indicator after all data is loaded
         hideProcessingIndicator();
@@ -1562,8 +1656,14 @@
       const folderName = document.getElementById('newProfileFolderName').value.trim();
       const btn = document.getElementById('createProfileBtn');
 
-      if (!profileName || !folderId || !folderName) {
-        errorEl.textContent = 'All fields are required';
+      if (!profileName) {
+        errorEl.textContent = 'Profile name is required';
+        errorEl.classList.add('show');
+        return;
+      }
+
+      if ((folderId && !folderName) || (!folderId && folderName)) {
+        errorEl.textContent = 'Provide both Drive folder ID and display name, or leave both blank';
         errorEl.classList.add('show');
         return;
       }
@@ -1600,16 +1700,6 @@
       }
     }
 
-    function showProfileScreen() {
-      document.getElementById('authScreen').classList.add('hidden');
-      document.getElementById('profileScreen').classList.remove('hidden');
-      document.querySelector('.header').style.display = 'flex';
-      document.querySelector('.tabs').style.display = 'flex';
-      document.querySelector('.main').style.display = 'block';
-      updateUserBadge();
-      renderProfileGrid();
-    }
-
     function handleLogout() {
       if (confirm('Logout and return to login?')) {
         clearAuth();
@@ -1621,10 +1711,10 @@
     function clearAuth() {
       jwtToken = null;
       currentUser = {};
-      currentProfile = {};
+      userProfiles = [];
+      setCurrentProfile(null);
       localStorage.removeItem('jwtToken');
       localStorage.removeItem('currentUser');
-      localStorage.removeItem('currentProfile');
     }
 
     // API wrapper to include auth header
@@ -1637,7 +1727,12 @@
       };
 
       // Add profile_id to URL if not already present and it's an upload
-      if (currentProfile.id && options.method === 'POST' && url.includes('/uploads')) {
+      if (
+        currentProfile.id &&
+        options.method === 'POST' &&
+        url.includes('/uploads') &&
+        !/[?&]profile_id=/.test(url)
+      ) {
         const sep = url.includes('?') ? '&' : '?';
         url += sep + 'profile_id=' + currentProfile.id;
       }
@@ -1769,6 +1864,10 @@
 
     // ── Processing ─────────────────────────────────────────────────────────
     async function processFiles() {
+      if (!currentProfile.id) {
+        showErr('Select a profile before uploading files.');
+        return;
+      }
       if (!files.length) return;
       clearErr(); processBtn.disabled = true;
 
@@ -1783,7 +1882,7 @@
         log('UPLOADING FILES...');
         const fd = new FormData();
         files.forEach(f => fd.append('files', f));
-        const upRes = await authFetch('/api/v1/uploads?profile_id=' + currentProfile.id, { method:'POST', body:fd });
+        const upRes = await authFetch('/api/v1/uploads', { method:'POST', body:fd });
         if (!upRes.ok) { const e = await upRes.json().catch(()=>({})); throw new Error(e.detail || 'Upload failed'); }
         const upData = await upRes.json();
         batchId = upData.batch_id;
@@ -2260,6 +2359,8 @@
       files = []; batchId = null; chatHistory = []; _allTransactions = []; _riskFlags = [];
       renderFiles(); clearErr(); processBtn.disabled = true;
       lockChat();
+      hideProcessingIndicator();
+      updateProfileContextUI();
       document.getElementById('tab-analysis').classList.add('tab--disabled');
       document.getElementById('results').classList.remove('results--visible');
       document.getElementById('logOutput').innerHTML = '';

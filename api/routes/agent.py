@@ -11,8 +11,8 @@ from google import genai
 from google.genai import types as genai_types
 
 from api.models import ChatRequest, ChatResponse, NarrativeRequest, NarrativeResponse
-from core.auth import get_current_user
-from core.database import AIReport, Transaction, UploadBatch, User, Profile, get_db
+from core.auth import get_current_user, get_owned_batch
+from core.database import AIReport, Transaction, User, get_db
 from agent.money_story_agent import run_agent
 
 router = APIRouter()
@@ -34,6 +34,24 @@ def get_client():
     return _client
 
 
+def deserialize_narrative_payload(payload: str) -> dict:
+    """Normalize stored AI report payloads into the response model shape."""
+    try:
+        parsed = json.loads(payload)
+        if isinstance(parsed, dict):
+            return parsed
+    except (TypeError, json.JSONDecodeError):
+        pass
+
+    return {
+        "narrative": payload or "No narrative available.",
+        "insights": [],
+        "action_items": [],
+        "risk_flags": [],
+        "summary_stats": {},
+    }
+
+
 @router.post("/narrative", response_model=NarrativeResponse, tags=["agent"])
 async def generate_narrative(
     request: NarrativeRequest,
@@ -45,21 +63,27 @@ async def generate_narrative(
     transaction data to produce a financial narrative.
     Requires authentication - batch must belong to user's profile.
     """
-    # Verify batch belongs to user's profile
-    result = await db.execute(
-        select(UploadBatch)
-        .join(Profile)
-        .where(
-            (UploadBatch.batch_id == request.batch_id) &
-            (Profile.user_id == current_user.id)
-        )
-    )
-    batch = result.scalar_one_or_none()
-    if not batch:
+    if not await get_owned_batch(db, request.batch_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Batch {request.batch_id} not found or access denied",
         )
+
+    if not request.query:
+        existing_report_result = await db.execute(
+            select(AIReport)
+            .where(AIReport.batch_id == request.batch_id)
+            .order_by(AIReport.created_at.desc())
+            .limit(1)
+        )
+        existing_report = existing_report_result.scalar_one_or_none()
+        if existing_report and existing_report.narrative:
+            return NarrativeResponse(
+                batch_id=request.batch_id,
+                report_id=existing_report.id,
+                narrative=deserialize_narrative_payload(existing_report.narrative),
+                created_at=existing_report.created_at.isoformat(),
+            )
 
     agent_result = await run_agent(request.batch_id, request.query)
 
@@ -93,17 +117,7 @@ async def chat(
     Session-scoped: only transactions for request.batch_id are included.
     Requires authentication - batch must belong to user's profile.
     """
-    # Verify batch belongs to user's profile
-    result = await db.execute(
-        select(UploadBatch)
-        .join(Profile)
-        .where(
-            (UploadBatch.batch_id == request.batch_id) &
-            (Profile.user_id == current_user.id)
-        )
-    )
-    batch = result.scalar_one_or_none()
-    if not batch:
+    if not await get_owned_batch(db, request.batch_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Batch {request.batch_id} not found or access denied",
