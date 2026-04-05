@@ -4,6 +4,49 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 
+# ── Auth (Login & Registration) ─────────────────────────────────────────────
+
+class SignupRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    username: str
+
+
+# ── Profile Management ──────────────────────────────────────────────────────
+
+class CreateProfileRequest(BaseModel):
+    profile_name: str
+    google_drive_folder_id: str
+    google_drive_folder_name: str
+
+
+class ProfileResponse(BaseModel):
+    id: str
+    profile_name: str
+    google_drive_folder_name: Optional[str]
+    connected: bool
+    created_at: str
+    last_synced: Optional[str]
+
+
+class UserProfilesResponse(BaseModel):
+    user_id: str
+    username: str
+    profiles: list[ProfileResponse]
+
+
 # ── Upload ──────────────────────────────────────────────────────────────────
 
 class UploadResponse(BaseModel):

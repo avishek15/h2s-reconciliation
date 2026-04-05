@@ -12,6 +12,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -26,15 +27,52 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String(100), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    profiles = relationship("Profile", back_populates="user", lazy="select")
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    profile_name = Column(String(100), nullable=False)
+    
+    # Google Drive credentials (OAuth tokens)
+    google_drive_access_token = Column(String(500), nullable=True)
+    google_drive_refresh_token = Column(String(500), nullable=True)
+    google_drive_folder_id = Column(String(100), nullable=True)
+    google_drive_folder_name = Column(String(255), nullable=True)
+    
+    # Profile metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_synced = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="profiles")
+    upload_batches = relationship("UploadBatch", back_populates="profile", lazy="select")
+
+
 class UploadBatch(Base):
     __tablename__ = "upload_batches"
 
     batch_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    profile_id = Column(String(36), ForeignKey("profiles.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String(50), default="pending")
     file_count = Column(Integer, default=0)
     transaction_count = Column(Integer, default=0)
 
+    profile = relationship("Profile", back_populates="upload_batches")
     files = relationship("BatchFile", back_populates="batch", lazy="select")
     transactions = relationship("Transaction", back_populates="batch", lazy="select")
     reconciliation_results = relationship("ReconciliationResult", back_populates="batch", lazy="select")
@@ -119,6 +157,15 @@ class AIReport(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Ensure existing SQLite schema includes new columns added later
+        if engine.dialect.name == "sqlite":
+            def _migrate(conn):
+                result = conn.execute(text("PRAGMA table_info(upload_batches)"))
+                columns = [row[1] for row in result]
+                if "profile_id" not in columns:
+                    conn.execute(text("ALTER TABLE upload_batches ADD COLUMN profile_id VARCHAR(36)"))
+            await conn.run_sync(_migrate)
 
 
 async def get_db():

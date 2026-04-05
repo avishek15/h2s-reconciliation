@@ -4,14 +4,15 @@ import os
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from google import genai
 from google.genai import types as genai_types
 
 from api.models import ChatRequest, ChatResponse, NarrativeRequest, NarrativeResponse
-from core.database import AIReport, Transaction, UploadBatch, get_db
+from core.auth import get_current_user
+from core.database import AIReport, Transaction, UploadBatch, User, Profile, get_db
 from agent.money_story_agent import run_agent
 
 router = APIRouter()
@@ -19,21 +20,46 @@ router = APIRouter()
 _project  = os.getenv("GOOGLE_CLOUD_PROJECT")
 _location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
 _model    = os.getenv("MODEL", "gemini-2.5-flash")
-_client   = genai.Client(vertexai=True, project=_project, location=_location)
+_api_key  = os.getenv("GOOGLE_API_KEY")
+
+# Initialize client lazily
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        if not _api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable is not set")
+        _client = genai.Client(api_key=_api_key)
+    return _client
 
 
 @router.post("/narrative", response_model=NarrativeResponse, tags=["agent"])
-async def generate_narrative(request: NarrativeRequest, db: AsyncSession = Depends(get_db)):
+async def generate_narrative(
+    request: NarrativeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Phase 3: Run the MoneyStoryAgent (ADK + Gemini) against the normalized
     transaction data to produce a financial narrative.
+    Requires authentication - batch must belong to user's profile.
     """
+    # Verify batch belongs to user's profile
     result = await db.execute(
-        select(UploadBatch).where(UploadBatch.batch_id == request.batch_id)
+        select(UploadBatch)
+        .join(Profile)
+        .where(
+            (UploadBatch.batch_id == request.batch_id) &
+            (Profile.user_id == current_user.id)
+        )
     )
     batch = result.scalar_one_or_none()
     if not batch:
-        raise HTTPException(status_code=404, detail=f"Batch {request.batch_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {request.batch_id} not found or access denied",
+        )
 
     agent_result = await run_agent(request.batch_id, request.query)
 
@@ -56,17 +82,32 @@ async def generate_narrative(request: NarrativeRequest, db: AsyncSession = Depen
 
 
 @router.post("/chat", response_model=ChatResponse, tags=["agent"])
-async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Q&A chat using the full transaction dataset for this session as context.
     Direct Gemini call — no ADK overhead needed for conversational Q&A.
     Session-scoped: only transactions for request.batch_id are included.
+    Requires authentication - batch must belong to user's profile.
     """
+    # Verify batch belongs to user's profile
     result = await db.execute(
-        select(UploadBatch).where(UploadBatch.batch_id == request.batch_id)
+        select(UploadBatch)
+        .join(Profile)
+        .where(
+            (UploadBatch.batch_id == request.batch_id) &
+            (Profile.user_id == current_user.id)
+        )
     )
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail=f"Batch {request.batch_id} not found")
+    batch = result.scalar_one_or_none()
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {request.batch_id} not found or access denied",
+        )
 
     # Load all transactions for this session
     txn_result = await db.execute(
@@ -135,7 +176,7 @@ User: {request.query}
 Answer using the pre-computed summary for totals and aggregate questions. Use the full transaction list for specific lookups. Always answer in USD unless asked for original currency. Be concise and direct."""
 
     def _call():
-        return _client.models.generate_content(
+        return get_client().models.generate_content(
             model=_model,
             contents=[genai_types.Part(text=prompt)],
         )

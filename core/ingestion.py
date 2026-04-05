@@ -15,8 +15,18 @@ from google.genai import types as genai_types
 project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
 location   = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
 model_id   = os.getenv("MODEL", "gemini-2.5-flash")
+api_key    = os.getenv("GOOGLE_API_KEY")
 
-_client = genai.Client(vertexai=True, project=project_id, location=location)
+# Initialize client lazily
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable is not set")
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
 # ── Phase 1: Extract raw text ──────────────────────────────────────────────
@@ -49,7 +59,7 @@ async def extract_text(filename: str, mime_type: str, content_b64: str) -> str:
     # PDF — Gemini vision
     if mime_type == "application/pdf":
         def _call():
-            return _client.models.generate_content(
+            return get_client().models.generate_content(
                 model=model_id,
                 contents=[
                     genai_types.Part(
@@ -71,7 +81,7 @@ async def extract_text(filename: str, mime_type: str, content_b64: str) -> str:
     # Image — Gemini vision
     if mime_type.startswith("image/"):
         def _call():
-            return _client.models.generate_content(
+            return get_client().models.generate_content(
                 model=model_id,
                 contents=[
                     genai_types.Part(
@@ -145,7 +155,7 @@ async def normalize_to_transactions(filename: str, text: str) -> list[dict]:
     prompt = _NORMALIZE_PROMPT.format(text=text[:120_000])  # stay within token budget
 
     def _call():
-        return _client.models.generate_content(
+        return get_client().models.generate_content(
             model=model_id,
             contents=[genai_types.Part(text=prompt)],
         )

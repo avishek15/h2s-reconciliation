@@ -21,8 +21,18 @@ from agent.tools.period_comparison import get_period_comparison
 project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
 location   = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
 model_id   = os.getenv("MODEL", "gemini-2.5-flash")
+apikey   = os.getenv("GOOGLE_API_KEY")
 
-client = genai.Client(vertexai=True, project=project_id, location=location)
+# Initialize client lazily
+client = None
+
+def get_client():
+    global client
+    if client is None:
+        if not apikey:
+            raise ValueError("GOOGLE_API_KEY environment variable is not set")
+        client = genai.Client(api_key=apikey)
+    return client
 
 AGENT_INSTRUCTION = """
 You are MoneyStoryAgent, an expert AI financial analyst. Your job is to analyze

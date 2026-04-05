@@ -4,9 +4,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from core.database import init_db
-from api.routes import uploads, pipeline, reports, agent, transactions, demo, admin
+from api.routes import uploads, pipeline, reports, agent, transactions, demo, admin, auth, google_drive
 
 
 @asynccontextmanager
@@ -34,7 +37,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(uploads.router, prefix="/api/v1")
+app.include_router(google_drive.router, prefix="/api/v1")
 app.include_router(pipeline.router, prefix="/api/v1/pipeline")
 app.include_router(reports.router, prefix="/api/v1/reports")
 app.include_router(agent.router, prefix="/api/v1/agent")
