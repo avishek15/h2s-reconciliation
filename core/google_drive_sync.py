@@ -4,18 +4,15 @@ Service for monitoring Google Drive folders and auto-triggering reconciliation.
 
 import asyncio
 import base64
-import json
 from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database import Profile, UploadBatch, BatchFile, Transaction, get_db, AsyncSessionLocal
+from core.database import Profile, UploadBatch, BatchFile, AsyncSessionLocal
 from core.google_drive import GoogleDriveService
-from agent.money_story_agent import run_agent
-from core.ingestion import extract_text, normalize_to_transactions
-from core.exchange import batch_to_usd
+from agent.tools.batch_orchestrator import BatchOrchestratorTool
 
 
 class GoogleDriveSyncService:
@@ -146,117 +143,21 @@ class GoogleDriveSyncService:
     @staticmethod
     async def auto_trigger_pipeline(batch_id: str):
         """
-        Auto-trigger the full pipeline for a batch:
-        1. Ingest transactions
-        2. Run reconciliation
-        3. Generate narrative
+        Auto-trigger the batch orchestration pipeline.
+        Delegates to BatchOrchestratorTool for end-to-end processing.
         
         Args:
             batch_id: Batch ID to process
         """
-        db = AsyncSessionLocal()  # Create own session since running asynchronously
-
+        print(f"[GoogleDriveSync] Triggering pipeline for batch {batch_id}")
+        
         try:
-            print(f"Starting auto pipeline for batch {batch_id}")
-            
-            # Get batch
-            result = await db.execute(
-                select(UploadBatch).where(UploadBatch.batch_id == batch_id)
-            )
-            batch = result.scalar_one_or_none()
-
-            if not batch:
-                print(f"Batch {batch_id} not found")
-                return
-
-            print(f"Processing {batch.file_count} files for batch {batch_id}")
-
-            # Get files
-            files_result = await db.execute(
-                select(BatchFile).where(BatchFile.batch_id == batch_id)
-            )
-            files = files_result.scalars().all()
-
-            if not files:
-                print(f"No files found for batch {batch_id}")
-                return
-
-            total = 0
-            for f in files:
-                print(f"Processing file: {f.filename}")
-                # Phase 1 — extract text
-                text = await extract_text(f.filename, f.mime_type, f.content_b64)
-                print(f"Extracted {len(text)} characters from {f.filename}")
-
-                # Phase 2 — normalize to transactions
-                txns = await normalize_to_transactions(f.filename, text)
-                txns = await batch_to_usd(txns)
-                print(f"Normalized {len(txns)} transactions from {f.filename}")
-
-                for txn in txns:
-                    try:
-                        amount = float(txn.get("amount", 0))
-                    except (TypeError, ValueError):
-                        amount = 0.0
-
-                    usd_amount = float(txn.get("amount_usd", amount))
-
-                    transaction = Transaction(
-                        batch_id=batch_id,
-                        date=txn.get("date"),
-                        amount=usd_amount,
-                        description=txn.get("description", ""),
-                        original_amount=amount,
-                        original_currency=txn.get("original_currency", txn.get("currency", "USD")),
-                        category=txn.get("category", "uncategorized"),
-                    )
-                    db.add(transaction)
-                    total += 1
-
-            await db.commit()
-            print(f"Committed {total} transactions for batch {batch_id}")
-
-            # Phase 3 — generate narrative
-            print(f"Generating narrative for batch {batch_id}")
-            narrative = await run_agent(batch_id)
-            print(f"Narrative generated for batch {batch_id}")
-
-            # Save narrative to AIReport
-            from core.database import AIReport
-            ai_report = AIReport(
-                batch_id=batch_id,
-                narrative=json.dumps(narrative) if not isinstance(narrative, str) else narrative,
-            )
-            db.add(ai_report)
-            await db.commit()
-
-            # Update batch status
-            await db.execute(
-                update(UploadBatch)
-                .where(UploadBatch.batch_id == batch_id)
-                .values(status="completed")
-            )
-            await db.commit()
-
-            print(f"Pipeline completed for batch {batch_id}, {total} transactions processed")
-
+            result = await BatchOrchestratorTool.process_batch(batch_id)
+            print(f"[GoogleDriveSync] Pipeline result: {result.get('status')}")
         except Exception as e:
-            print(f"Error in auto-trigger pipeline for {batch_id}: {e}")
+            print(f"[GoogleDriveSync] Error triggering pipeline: {e}")
             import traceback
             traceback.print_exc()
-            try:
-                await db.execute(
-                    update(UploadBatch)
-                    .where(UploadBatch.batch_id == batch_id)
-                    .values(status="failed")
-                )
-                await db.commit()
-                print(f"Marked batch {batch_id} as failed")
-            except Exception as inner:
-                print(f"Error marking batch {batch_id} as failed: {inner}")
-        finally:
-            if db:
-                await db.close()
 
     @staticmethod
     async def sync_all_profiles():
