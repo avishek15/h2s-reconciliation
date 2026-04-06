@@ -2,7 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models import SignupRequest, LoginRequest, AuthResponse, CreateProfileRequest, ProfileResponse, UserProfilesResponse
+from api.models import (
+    AuthResponse,
+    CreateProfileRequest,
+    LoginRequest,
+    ProfileResponse,
+    SignupRequest,
+    UserProfilesResponse,
+)
 from core.auth import (
     create_access_token,
     get_current_user,
@@ -12,13 +19,23 @@ from core.auth import (
 )
 from core.database import (
     AIReport,
+    Account,
+    AgentInstructionAsset,
     BatchFile,
+    Budget,
+    CashAllocation,
+    CategorizationRule,
+    FinancialGoal,
+    MemoryFact,
     Profile,
     ReconciliationResult,
+    RecurringCommitment,
     RecurringPattern,
+    ToolSyncState,
     Transaction,
     UploadBatch,
     User,
+    WorkflowRun,
     get_db,
 )
 
@@ -295,13 +312,38 @@ async def delete_profile(
     )
     batch_ids = [row[0] for row in batch_ids_result.all()]
 
+    await db.execute(delete(CashAllocation).where(CashAllocation.profile_id == profile_id))
+    await db.execute(
+        delete(CategorizationRule).where(CategorizationRule.profile_id == profile_id)
+    )
+    await db.execute(delete(MemoryFact).where(MemoryFact.profile_id == profile_id))
+    await db.execute(delete(FinancialGoal).where(FinancialGoal.profile_id == profile_id))
+    await db.execute(delete(Budget).where(Budget.profile_id == profile_id))
+    await db.execute(
+        delete(RecurringCommitment).where(RecurringCommitment.profile_id == profile_id)
+    )
+    await db.execute(delete(WorkflowRun).where(WorkflowRun.profile_id == profile_id))
+    await db.execute(delete(ToolSyncState).where(ToolSyncState.profile_id == profile_id))
+    await db.execute(
+        delete(AgentInstructionAsset).where(AgentInstructionAsset.profile_id == profile_id)
+    )
+
     if batch_ids:
         await db.execute(delete(AIReport).where(AIReport.batch_id.in_(batch_ids)))
-        await db.execute(delete(ReconciliationResult).where(ReconciliationResult.batch_id.in_(batch_ids)))
-        await db.execute(delete(RecurringPattern).where(RecurringPattern.batch_id.in_(batch_ids)))
+        await db.execute(
+            delete(ReconciliationResult).where(
+                ReconciliationResult.batch_id.in_(batch_ids)
+            )
+        )
+        await db.execute(
+            delete(RecurringPattern).where(RecurringPattern.batch_id.in_(batch_ids))
+        )
         await db.execute(delete(Transaction).where(Transaction.batch_id.in_(batch_ids)))
         await db.execute(delete(BatchFile).where(BatchFile.batch_id.in_(batch_ids)))
         await db.execute(delete(UploadBatch).where(UploadBatch.batch_id.in_(batch_ids)))
+
+    await db.execute(delete(Transaction).where(Transaction.profile_id == profile_id))
+    await db.execute(delete(Account).where(Account.profile_id == profile_id))
 
     await db.execute(delete(Profile).where(Profile.id == profile_id))
     await db.commit()

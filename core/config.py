@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./reconciliation.db"
     app_env: str = "development"
     log_level: str = "INFO"
+    app_base_url: str = "http://127.0.0.1:8000"
     
     # Authentication & JWT
     jwt_secret_key: str = "your-super-secret-jwt-key-change-in-production"
@@ -20,7 +21,10 @@ class Settings(BaseSettings):
     # Google Drive OAuth
     google_drive_client_id: str = os.getenv("GOOGLE_DRIVE_CLIENT_ID", "")
     google_drive_client_secret: str = os.getenv("GOOGLE_DRIVE_CLIENT_SECRET", "")
-    google_drive_redirect_uri: str = "http://127.0.0.1:8000/api/v1/auth/google/callback"
+    google_drive_redirect_uri: str = os.getenv(
+        "GOOGLE_DRIVE_REDIRECT_URI",
+        "http://127.0.0.1:8000/api/v1/auth/google/callback",
+    )
 
 
 settings = Settings()

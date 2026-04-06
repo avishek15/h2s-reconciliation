@@ -9,6 +9,7 @@ from core.auth import get_current_user, get_owned_batch
 from core.database import BatchFile, Transaction, User, get_db
 from core.exchange import batch_to_usd
 from core.ingestion import extract_text, normalize_to_transactions
+from core.services.profile_data import get_or_create_account
 
 router = APIRouter()
 
@@ -58,6 +59,24 @@ async def reconcile(
         # Phase 2b — convert all amounts to USD
         transactions = await batch_to_usd(transactions)
 
+        account = None
+        if batch.profile_id:
+            account_currency = next(
+                (
+                    str(txn.get("original_currency", txn.get("currency", ""))).upper()
+                    for txn in transactions
+                    if txn.get("original_currency") or txn.get("currency")
+                ),
+                None,
+            )
+            account = await get_or_create_account(
+                db,
+                profile_id=batch.profile_id,
+                account_name=f.filename,
+                currency=account_currency,
+                external_ref=f.filename,
+            )
+
         for txn in transactions:
             try:
                 amount = float(txn.get("amount", 0))
@@ -69,6 +88,8 @@ async def reconcile(
             t = Transaction(
                 id=str(uuid.uuid4()),
                 batch_id=request.batch_id,
+                profile_id=batch.profile_id,
+                account_id=account.id if account else None,
                 date=str(txn.get("date", "")).strip() or "unknown",
                 amount=usd_amount,                           # stored in USD
                 original_amount=amount,                      # original currency amount

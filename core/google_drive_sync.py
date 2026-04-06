@@ -43,7 +43,11 @@ class GoogleDriveSyncService:
 
             if not profile or not profile.google_drive_access_token or not profile.google_drive_folder_id:
                 print(f"Profile {profile_id} not found or missing Google Drive token")
-                return
+                return {
+                    "status": "not_connected",
+                    "profile_id": profile_id,
+                    "message": "Profile not found or missing Google Drive connection",
+                }
 
             # Initialize Google Drive service
             gd_service = GoogleDriveService(
@@ -59,7 +63,12 @@ class GoogleDriveSyncService:
 
             if not files:
                 print(f"No files found in profile {profile_id}")
-                return
+                return {
+                    "status": "no_files",
+                    "profile_id": profile_id,
+                    "file_count": 0,
+                    "message": "No supported statement files found in the Drive folder",
+                }
 
             print(f"Found {len(files)} files in profile {profile_id}")
 
@@ -120,6 +129,14 @@ class GoogleDriveSyncService:
                 .values(last_synced=datetime.utcnow())
             )
             await db.commit()
+            return {
+                "status": "syncing",
+                "profile_id": profile_id,
+                "batch_id": batch.batch_id,
+                "file_count": file_count,
+                "matched_file_count": len(files),
+                "message": "Drive files synced and reconciliation started",
+            }
 
         except Exception as e:
             print(f"Error syncing profile {profile_id}: {e}")
@@ -137,6 +154,11 @@ class GoogleDriveSyncService:
                     await db.commit()
             except Exception as inner:
                 print(f"Error marking batch failed for profile {profile_id}: {inner}")
+            return {
+                "status": "failed",
+                "profile_id": profile_id,
+                "message": str(e),
+            }
         finally:
             if owns_db and db:
                 await db.close()

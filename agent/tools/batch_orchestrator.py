@@ -20,6 +20,7 @@ from core.database import (
 )
 from core.ingestion import extract_text, normalize_to_transactions
 from core.exchange import batch_to_usd
+from core.services.profile_data import get_or_create_account
 from agent.money_story_agent import run_agent
 
 
@@ -94,6 +95,24 @@ class BatchOrchestratorTool:
                 txns = await batch_to_usd(txns)
                 print(f"[BatchOrchestrator] After USD conversion: {len(txns)} transactions")
 
+                account = None
+                if batch.profile_id:
+                    account_currency = next(
+                        (
+                            str(txn.get("original_currency", txn.get("currency", ""))).upper()
+                            for txn in txns
+                            if txn.get("original_currency") or txn.get("currency")
+                        ),
+                        None,
+                    )
+                    account = await get_or_create_account(
+                        db,
+                        profile_id=batch.profile_id,
+                        account_name=f.filename,
+                        currency=account_currency,
+                        external_ref=f.filename,
+                    )
+
                 # Persist transactions
                 for txn in txns:
                     try:
@@ -105,14 +124,22 @@ class BatchOrchestratorTool:
 
                     transaction = Transaction(
                         batch_id=batch_id,
-                        date=txn.get("date"),
+                        profile_id=batch.profile_id,
+                        account_id=account.id if account else None,
+                        date=str(txn.get("date", "")).strip() or "unknown",
                         amount=usd_amount,
-                        description=txn.get("description", ""),
+                        description=str(txn.get("description", "")).strip() or "—",
+                        clean_name=str(txn.get("clean_name", "")).strip() or None,
                         original_amount=amount,
                         original_currency=txn.get(
                             "original_currency", txn.get("currency", "USD")
                         ),
-                        category=txn.get("category", "uncategorized"),
+                        category=str(txn.get("category", "Other")).strip(),
+                        source_account=f.filename,
+                        transaction_type=str(
+                            txn.get("type", "debit" if amount < 0 else "credit")
+                        ).strip(),
+                        raw_row=str(txn),
                     )
                     db.add(transaction)
                     total_transactions += 1
