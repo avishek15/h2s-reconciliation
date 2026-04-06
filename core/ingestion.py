@@ -6,27 +6,14 @@ import asyncio
 import base64
 import io
 import json
-import os
 import re
 
-from google import genai
 from google.genai import types as genai_types
 
-project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-location   = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-model_id   = os.getenv("MODEL", "gemini-2.5-flash")
-api_key    = os.getenv("GOOGLE_API_KEY")
+from core.gemini_client import get_gemini_client, get_gemini_model_id
 
-# Initialize client lazily
-_client = None
 
-def get_client():
-    global _client
-    if _client is None:
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is not set")
-        _client = genai.Client(api_key=api_key)
-    return _client
+model_id = get_gemini_model_id()
 
 
 # ── Phase 1: Extract raw text ──────────────────────────────────────────────
@@ -59,7 +46,7 @@ async def extract_text(filename: str, mime_type: str, content_b64: str) -> str:
     # PDF — Gemini vision
     if mime_type == "application/pdf":
         def _call():
-            return get_client().models.generate_content(
+            return get_gemini_client().models.generate_content(
                 model=model_id,
                 contents=[
                     genai_types.Part(
@@ -76,12 +63,13 @@ async def extract_text(filename: str, mime_type: str, content_b64: str) -> str:
             resp = await asyncio.to_thread(_call)
             return resp.text or ""
         except Exception as exc:
-            return f"[PDF extraction error for {filename}: {exc}]"
+            print(f"[Ingestion] PDF extraction error for {filename}: {exc}")
+            return ""
 
     # Image — Gemini vision
     if mime_type.startswith("image/"):
         def _call():
-            return get_client().models.generate_content(
+            return get_gemini_client().models.generate_content(
                 model=model_id,
                 contents=[
                     genai_types.Part(
@@ -98,7 +86,8 @@ async def extract_text(filename: str, mime_type: str, content_b64: str) -> str:
             resp = await asyncio.to_thread(_call)
             return resp.text or ""
         except Exception as exc:
-            return f"[Image extraction error for {filename}: {exc}]"
+            print(f"[Ingestion] Image extraction error for {filename}: {exc}")
+            return ""
 
     return ""
 
@@ -155,7 +144,7 @@ async def normalize_to_transactions(filename: str, text: str) -> list[dict]:
     prompt = _NORMALIZE_PROMPT.format(text=text[:120_000])  # stay within token budget
 
     def _call():
-        return get_client().models.generate_content(
+        return get_gemini_client().models.generate_content(
             model=model_id,
             contents=[genai_types.Part(text=prompt)],
         )
@@ -163,7 +152,8 @@ async def normalize_to_transactions(filename: str, text: str) -> list[dict]:
     try:
         resp = await asyncio.to_thread(_call)
         raw = resp.text or ""
-    except Exception:
+    except Exception as exc:
+        print(f"[Ingestion] Transaction normalization error for {filename}: {exc}")
         return []
 
     # Direct JSON parse

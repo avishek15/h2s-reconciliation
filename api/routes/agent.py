@@ -1,37 +1,22 @@
 import asyncio
 import json
-import os
 import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from google import genai
 from google.genai import types as genai_types
 
 from api.models import ChatRequest, ChatResponse, NarrativeRequest, NarrativeResponse
 from core.auth import get_current_user, get_owned_batch
 from core.database import AIReport, Transaction, User, get_db
+from core.gemini_client import get_gemini_client, get_gemini_model_id
 from agent.money_story_agent import run_agent
 
 router = APIRouter()
 
-_project  = os.getenv("GOOGLE_CLOUD_PROJECT")
-_location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-_model    = os.getenv("MODEL", "gemini-2.5-flash")
-_api_key  = os.getenv("GOOGLE_API_KEY")
-
-# Initialize client lazily
-_client = None
-
-def get_client():
-    global _client
-    if _client is None:
-        if not _api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is not set")
-        _client = genai.Client(api_key=_api_key)
-    return _client
+_model = get_gemini_model_id()
 
 
 def deserialize_narrative_payload(payload: str) -> dict:
@@ -190,7 +175,7 @@ User: {request.query}
 Answer using the pre-computed summary for totals and aggregate questions. Use the full transaction list for specific lookups. Always answer in USD unless asked for original currency. Be concise and direct."""
 
     def _call():
-        return get_client().models.generate_content(
+        return get_gemini_client().models.generate_content(
             model=_model,
             contents=[genai_types.Part(text=prompt)],
         )

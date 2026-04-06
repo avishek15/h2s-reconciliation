@@ -12,7 +12,6 @@ from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
-from google import genai
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent.tools.summary_metrics import get_summary_metrics
@@ -20,21 +19,7 @@ from agent.tools.reconciliation_flags import get_reconciliation_flags
 from agent.tools.recurring_patterns import get_recurring_patterns
 from agent.tools.period_comparison import get_period_comparison
 
-project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-location   = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
 model_id   = os.getenv("MODEL", "gemini-2.5-flash")
-apikey   = os.getenv("GOOGLE_API_KEY")
-
-# Initialize client lazily
-client = None
-
-def get_client():
-    global client
-    if client is None:
-        if not apikey:
-            raise ValueError("GOOGLE_API_KEY environment variable is not set")
-        client = genai.Client(api_key=apikey)
-    return client
 
 AGENT_INSTRUCTION = """
 You are MoneyStoryAgent, an expert AI financial analyst. Your job is to analyze
