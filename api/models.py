@@ -166,7 +166,10 @@ class TransactionListResponse(BaseModel):
     offset: int
     limit: int
     transactions: list[TransactionItem]
-
+    #Added fields for health score and insights
+    health_score: Optional[int] = None
+    health_status: Optional[str] = None
+    insights: Optional[list[str]] = None
 
 # ── Chat ─────────────────────────────────────────────────────────────────────
 
