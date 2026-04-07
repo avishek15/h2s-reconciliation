@@ -286,7 +286,9 @@ async def get_latest_batch_for_profile(
         "batch_id": batch.batch_id,
         "status": batch.status,
         "file_count": batch.file_count,
+        "transaction_count": batch.transaction_count,
         "created_at": batch.created_at.isoformat(),
+        "completed_at": batch.completed_at.isoformat() if batch.completed_at else None,
     }
 
 

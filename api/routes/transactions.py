@@ -5,8 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.models import TransactionItem, TransactionListResponse
 from core.auth import get_current_user, get_owned_batch
 from core.database import Transaction, User, get_db
-
-from core.health_score import calculate_health_score, generate_insights, get_status
+from core.health_score import get_batch_health_report
 
 router = APIRouter()
 
@@ -37,15 +36,7 @@ async def list_transactions(
     )
     txns = txn_result.scalars().all()
 
-    # Calculate health score and insights
-    result = calculate_health_score(txns)
-
-    score = result["score"]
-    category_totals = result["category_totals"]
-    income = result["income"]
-
-    status = get_status(score)
-    insights = generate_insights(category_totals, income)
+    health = await get_batch_health_report(batch_id, db=db)
 
     return TransactionListResponse(
         batch_id=batch_id,
@@ -67,7 +58,8 @@ async def list_transactions(
             )
             for t in txns
         ],
-        health_score=score,
-        health_status=status,
-        insights=insights
+        health_score=health["score"],
+        health_status=health["status"],
+        insights=health["recommendations"],
+        health_breakdown=health,
     )

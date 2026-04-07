@@ -95,6 +95,7 @@ class UploadBatch(Base):
     batch_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     profile_id = Column(String(36), ForeignKey("profiles.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
     status = Column(String(50), default="pending")
     file_count = Column(Integer, default=0)
     transaction_count = Column(Integer, default=0)
@@ -355,6 +356,8 @@ async def init_db():
                 columns = [row[1] for row in result]
                 if "profile_id" not in columns:
                     conn.execute(text("ALTER TABLE upload_batches ADD COLUMN profile_id VARCHAR(36)"))
+                if "completed_at" not in columns:
+                    conn.execute(text("ALTER TABLE upload_batches ADD COLUMN completed_at DATETIME"))
 
                 result = conn.execute(text("PRAGMA table_info(transactions)"))
                 columns = [row[1] for row in result]

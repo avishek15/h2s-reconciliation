@@ -1,46 +1,20 @@
 import json
 from typing import Any, Optional
 
-from fastapi import HTTPException
-from mcp.server.auth.middleware.auth_context import get_access_token
-from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
 from sqlalchemy import select
 
-from core.auth import get_owned_profile, verify_token as verify_app_token
 from core.config import settings
 from core.database import AsyncSessionLocal, Profile, UploadBatch
 from core.google_drive import GoogleDriveService
 from core.google_drive_sync import GoogleDriveSyncService
-
-
-class AppJwtTokenVerifier:
-    """Expose the app's JWTs as MCP bearer tokens."""
-
-    async def verify_token(self, token: str) -> Optional[AccessToken]:
-        try:
-            token_data = verify_app_token(token)
-        except HTTPException:
-            return None
-
-        return AccessToken(
-            token=token,
-            client_id=token_data.user_id,
-            scopes=["drive:read", "drive:sync"],
-            expires_at=int(token_data.exp.timestamp()),
-        )
-
-
-def _current_mcp_user_id() -> str:
-    access_token = get_access_token()
-    if not access_token:
-        raise PermissionError("MCP request is missing a valid bearer token")
-    return access_token.client_id
+from core.auth import get_owned_profile
+from core.mcp_auth import AppJwtTokenVerifier, current_mcp_user_id
 
 
 async def _get_owned_drive_profile(profile_id: str) -> Profile:
-    user_id = _current_mcp_user_id()
+    user_id = current_mcp_user_id()
     async with AsyncSessionLocal() as db:
         profile = await get_owned_profile(db, profile_id, user_id)
         if not profile:
@@ -51,7 +25,7 @@ async def _get_owned_drive_profile(profile_id: str) -> Profile:
 
 
 async def _latest_batch_payload(profile_id: str) -> dict[str, Any]:
-    user_id = _current_mcp_user_id()
+    user_id = current_mcp_user_id()
     async with AsyncSessionLocal() as db:
         profile = await get_owned_profile(db, profile_id, user_id)
         if not profile:
@@ -80,6 +54,7 @@ async def _latest_batch_payload(profile_id: str) -> dict[str, Any]:
         "file_count": batch.file_count,
         "transaction_count": batch.transaction_count,
         "created_at": batch.created_at.isoformat() if batch.created_at else None,
+        "completed_at": batch.completed_at.isoformat() if batch.completed_at else None,
     }
 
 
@@ -90,7 +65,8 @@ drive_mcp = FastMCP(
         "agent. All tools require the app JWT bearer token and enforce profile ownership."
     ),
     host="0.0.0.0",
-    streamable_http_path="/drive",
+    mount_path="/mcp/drive",
+    streamable_http_path="/",
     stateless_http=True,
     json_response=True,
     auth=AuthSettings(
@@ -98,7 +74,7 @@ drive_mcp = FastMCP(
         resource_server_url=None,
         required_scopes=["drive:read"],
     ),
-    token_verifier=AppJwtTokenVerifier(),
+    token_verifier=AppJwtTokenVerifier(["drive:read", "drive:sync"]),
 )
 
 

@@ -145,6 +145,34 @@ class RecurringReportResponse(BaseModel):
     data: dict[str, Any]
 
 
+class HealthSubscoreItem(BaseModel):
+    score: int
+    max_score: int
+    detail: Optional[str] = None
+
+
+class HealthDriverItem(BaseModel):
+    label: str
+    impact: int
+    detail: str
+
+
+class HealthReportResponse(BaseModel):
+    batch_id: str
+    batch_status: Optional[str] = None
+    batch_created_at: Optional[str] = None
+    batch_completed_at: Optional[str] = None
+    transaction_count: int
+    score: int
+    status: str
+    summary: str
+    subscores: dict[str, HealthSubscoreItem]
+    drivers: list[HealthDriverItem]
+    recommendations: list[str]
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    date_range: dict[str, Optional[str]] = Field(default_factory=dict)
+
+
 # ── Transactions ─────────────────────────────────────────────────────────────
 
 class TransactionItem(BaseModel):
@@ -170,6 +198,7 @@ class TransactionListResponse(BaseModel):
     health_score: Optional[int] = None
     health_status: Optional[str] = None
     insights: Optional[list[str]] = None
+    health_breakdown: Optional[dict[str, Any]] = None
 
 # ── Chat ─────────────────────────────────────────────────────────────────────
 

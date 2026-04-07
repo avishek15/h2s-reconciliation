@@ -309,6 +309,202 @@
     .stat-value.neg { color: var(--red-bright); }
     .stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
 
+    /* Health panel */
+    .health-card {
+      background: linear-gradient(180deg, rgba(240,165,0,0.08), rgba(15,18,25,0.96));
+      border: 1px solid rgba(240,165,0,0.28);
+      border-radius: 2px;
+      padding: 18px 18px 16px;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeUp .4s ease forwards;
+    }
+    .health-card.hidden { display: none; }
+    .health-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .health-score-wrap {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      min-width: 0;
+    }
+    .health-score {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .health-score-value {
+      font-family: var(--font-disp);
+      font-size: 54px;
+      line-height: .9;
+      letter-spacing: 0.03em;
+      color: var(--amber);
+    }
+    .health-score-value.no-data { color: var(--text-dim); }
+    .health-score-value.excellent { color: var(--green-bright); }
+    .health-score-value.good { color: var(--green); }
+    .health-score-value.average { color: var(--amber); }
+    .health-score-value.poor { color: var(--red-bright); }
+    .health-score-label {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .health-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 9px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--text-bright);
+      background: var(--surface);
+      margin-top: 6px;
+    }
+    .health-status.excellent { border-color: var(--green); color: var(--green-bright); background: var(--green-dim); }
+    .health-status.good { border-color: rgba(29,184,122,.4); color: var(--green-bright); background: rgba(29,184,122,.08); }
+    .health-status.average { border-color: rgba(240,165,0,.45); color: var(--amber); background: var(--amber-dim); }
+    .health-status.poor { border-color: var(--red); color: var(--red-bright); background: var(--red-dim); }
+    .health-status.no-data { border-color: var(--border-2); color: var(--text-dim); background: var(--surface-2); }
+    .health-summary {
+      max-width: 600px;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-bright);
+      text-align: right;
+    }
+    .health-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    .health-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      background: var(--surface);
+    }
+    .health-pill strong { color: var(--text-bright); font-weight: 600; }
+    .health-subgrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .health-subscore {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 10px;
+    }
+    .health-subscore-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .health-subscore-value {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-family: var(--font-disp);
+      color: var(--amber);
+      line-height: 1;
+    }
+    .health-subscore-value strong {
+      font-size: 20px;
+      letter-spacing: 0.03em;
+    }
+    .health-subscore-value span {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+    .health-drivers {
+      display: grid;
+      gap: 8px;
+    }
+    .health-driver {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-bright);
+    }
+    .health-driver:first-child { border-top: none; }
+    .health-driver-imp {
+      flex-shrink: 0;
+      min-width: 42px;
+      text-align: center;
+      padding: 3px 6px;
+      border-radius: 2px;
+      font-family: var(--font-disp);
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: var(--surface-2);
+    }
+    .health-driver-imp.pos {
+      color: var(--green-bright);
+      border-color: rgba(29,184,122,.35);
+      background: rgba(29,184,122,.08);
+    }
+    .health-driver-imp.neg {
+      color: var(--red-bright);
+      border-color: rgba(217,64,64,.35);
+      background: rgba(217,64,64,.08);
+    }
+    .health-driver-body { min-width: 0; }
+    .health-driver-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+    .health-driver-detail {
+      color: var(--text-bright);
+      line-height: 1.7;
+    }
+    .health-rec-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .health-rec-item {
+      padding: 6px 9px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-bright);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
     /* Transaction table */
     .txn-wrap {
       background: var(--surface); border: 1px solid var(--border);
@@ -513,16 +709,21 @@
 
     @media (max-width: 900px) {
       .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .health-subgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .txn-head, .txn-row { grid-template-columns: 80px 1fr 90px; }
       .txn-head > :nth-child(3), .txn-row > :nth-child(3) { display: none; }
       .two-col    { grid-template-columns: 1fr; }
       .actions-row{ grid-template-columns: 1fr; }
+      .health-header { flex-direction: column; }
+      .health-summary { text-align: left; max-width: none; }
+      .health-meta { justify-content: flex-start; }
     }
     @media (max-width: 580px) {
       .main { padding: 24px 14px 60px; }
       .header, .tabs { padding-left: 14px; padding-right: 14px; }
       .header-right .h-badge:not(.wipe-btn) { display: none; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
+      .health-subgrid { grid-template-columns: 1fr 1fr; }
     }
   /* ── Chart section ── */
   .chart-section {
@@ -963,6 +1164,7 @@
           <div class="spinner"></div>
           <div id="processingIndicatorText">Processing your batch, please wait...</div>
         </div>
+        <div class="health-card hidden" id="healthCard"></div>
         <div class="stats-grid" id="statsGrid"></div>
 
         <div class="chart-section" id="chartSection" style="display:none">
@@ -1053,6 +1255,7 @@
     let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     let currentProfile = JSON.parse(localStorage.getItem('currentProfile') || '{}');
     let userProfiles = [];
+    let _syncStartedAt = null;
 
     // Initialize auth on page load
     window.addEventListener('load', async () => {
@@ -1418,6 +1621,7 @@
       try {
         // Show loading
         showStatus('Syncing Google Drive files...', 'info');
+        _syncStartedAt = Date.now();
 
         // Show the results panel and processing indicator
         document.getElementById('tab-analysis').classList.remove('tab--disabled');
@@ -1444,11 +1648,11 @@
         }
 
         // Poll for completion
-        let attempts = 0;
-        const maxAttempts = 300; // 5 minutes max (increased from 2 minutes)
+        const maxWaitMs = 30 * 60 * 1000;
+        const pollIntervalMs = 1000;
         let missingBatchCount = 0;
 
-        while (attempts < maxAttempts) {
+        while (Date.now() - _syncStartedAt < maxWaitMs) {
           const batchRes = await authFetch(`/api/v1/profiles/${profileId}/latest-batch`);
           if (batchRes.status === 404) {
             missingBatchCount++;
@@ -1461,27 +1665,29 @@
           if (batchRes.ok) {
             missingBatchCount = 0;
             const batchData = await batchRes.json();
-            showProcessingIndicator(`Batch is ${batchData.status}. Waiting for completion... (${attempts + 1}/${maxAttempts})`);
+            const createdAt = batchData.created_at ? new Date(batchData.created_at).getTime() : null;
+            const completedAt = batchData.completed_at ? new Date(batchData.completed_at).getTime() : null;
+            const elapsedMs = completedAt && createdAt ? completedAt - createdAt : createdAt ? Date.now() - createdAt : Date.now() - _syncStartedAt;
+            showProcessingIndicator(`Batch is ${batchData.status}. Elapsed ${formatDuration(elapsedMs)}.`);
 
-            if (batchData.status === 'completed') {
-              // Load the report
-              await loadReport(batchData.batch_id);
-              showStatus('Analysis complete!', 'success');
-              return;
-            }
-
-            if (batchData.status === 'failed') {
+            if (String(batchData.status || '').toLowerCase() === 'failed') {
               hideProcessingIndicator();
               throw new Error('Analysis failed. Please check server logs for pipeline errors.');
+            }
+
+            if (String(batchData.status || '').toLowerCase() === 'completed') {
+              // Load the report
+              await loadReport(batchData.batch_id);
+              showStatus(`Analysis complete in ${formatDuration(elapsedMs)}.`, 'success');
+              return;
             }
           }
 
           // Wait 1 second
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
+          await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
         }
 
-        throw new Error('Sync timed out');
+        throw new Error(`Sync is taking longer than expected (${formatDuration(maxWaitMs)} max). Please check server logs.`);
 
       } catch (error) {
         console.error('Sync error:', error);
@@ -1505,8 +1711,15 @@
         if (!txnRes.ok) throw new Error('Failed to load transactions');
         const txnData = await txnRes.json();
 
+        let healthData = null;
+        try {
+          healthData = await fetchHealthReport(batchIdValue);
+        } catch (healthErr) {
+          console.warn('Health report unavailable:', healthErr);
+        }
+
         document.getElementById('terminalWindow').style.display = 'none';
-        renderResults(narrativeData, txnData.transactions || []);
+        renderResults(narrativeData, txnData.transactions || [], healthData);
         unlockChat();
 
         // Hide processing indicator after all data is loaded
@@ -1831,6 +2044,114 @@
       out.scrollTop = out.scrollHeight;
     }
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    function formatDuration(ms) {
+      if (ms == null || isNaN(ms)) return '—';
+      const totalSeconds = Math.max(0, Math.round(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+      if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+      return `${seconds}s`;
+    }
+    function slugify(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'no-data';
+    }
+    function healthValueClass(status) {
+      const slug = slugify(status);
+      if (slug === 'excellent' || slug === 'good' || slug === 'average' || slug === 'poor' || slug === 'no-data') {
+        return slug;
+      }
+      return 'no-data';
+    }
+    async function fetchHealthReport(batchId) {
+      const res = await authFetch(`/api/v1/reports/health?batch_id=${encodeURIComponent(batchId)}`);
+      if (!res.ok) {
+        let message = 'Failed to load health report';
+        try {
+          const data = await res.json();
+          message = data.detail || message;
+        } catch (_) {}
+        throw new Error(message);
+      }
+      return res.json();
+    }
+    function renderHealthCard(health) {
+      const card = document.getElementById('healthCard');
+      if (!card) return;
+
+      if (!health) {
+        card.classList.add('hidden');
+        card.innerHTML = '';
+        return;
+      }
+
+      const status = health.status || health.health_status || 'No Data';
+      const score = typeof health.score === 'number' ? health.score : health.health_score;
+      const scoreClass = healthValueClass(status);
+      const subscores = health.subscores || {};
+      const drivers = health.drivers || [];
+      const recommendations = health.recommendations || [];
+      const metrics = health.metrics || {};
+      const dateRange = health.date_range || {};
+      const transactionCount = health.transaction_count ?? 0;
+      const batchStatus = health.batch_status || 'unknown';
+
+      card.classList.remove('hidden');
+      card.innerHTML = `
+        <div class="health-header">
+          <div class="health-score-wrap">
+            <div class="health-score">
+              <div class="health-score-label">Financial Health</div>
+              <div class="health-score-value ${scoreClass}">${score ?? '—'}</div>
+              <div class="health-status ${scoreClass}">${esc(status)}</div>
+            </div>
+          </div>
+          <div class="health-summary">
+            ${esc(health.summary || 'No summary available.')}
+            <div class="health-meta">
+              <span class="health-pill"><strong>Transactions</strong> ${transactionCount}</span>
+              <span class="health-pill"><strong>Income</strong> ${money(metrics.total_income)}</span>
+              <span class="health-pill"><strong>Expenses</strong> ${money(metrics.total_expenses)}</span>
+              <span class="health-pill"><strong>Range</strong> ${esc(dateRange.from || '—')} → ${esc(dateRange.to || '—')}</span>
+              <span class="health-pill"><strong>Batch</strong> ${esc(batchStatus)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="health-subgrid">
+          ${Object.entries(subscores).map(([key, item]) => `
+            <div class="health-subscore">
+              <div class="health-subscore-label">${esc(key.replace(/_/g, ' '))}</div>
+              <div class="health-subscore-value"><strong>${esc(String(item.score ?? 0))}</strong><span>/ ${esc(String(item.max_score ?? 0))}</span></div>
+              <div class="stat-sub" style="margin-top:8px">${esc(item.detail || '—')}</div>
+            </div>
+          `).join('')}
+        </div>
+        ${drivers.length ? `
+          <div class="block-title" style="margin:4px 0 10px">Health Drivers</div>
+          <div class="health-drivers">
+            ${drivers.map(d => `
+              <div class="health-driver">
+                <div class="health-driver-imp ${d.impact >= 0 ? 'pos' : 'neg'}">${d.impact >= 0 ? '+' : ''}${esc(String(d.impact ?? 0))}</div>
+                <div class="health-driver-body">
+                  <div class="health-driver-label">${esc(d.label || 'Driver')}</div>
+                  <div class="health-driver-detail">${esc(d.detail || '')}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${recommendations.length ? `
+          <div class="block-title" style="margin:14px 0 10px">Recommendations</div>
+          <div class="health-rec-row">
+            ${recommendations.map(r => `<div class="health-rec-item">${esc(r)}</div>`).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
 
     // ── Live ticker — animated log line that cycles messages while waiting ──
     let _tickerInterval = null;
@@ -1949,12 +2270,18 @@
         // Step 4: Fetch transaction line items
         const txnRes = await authFetch(`/api/v1/transactions?batch_id=${batchId}&limit=500`);
         const txnData = txnRes.ok ? await txnRes.json() : { transactions: [] };
+        let healthData = null;
+        try {
+          healthData = await fetchHealthReport(batchId);
+        } catch (healthErr) {
+          console.warn('Health report unavailable:', healthErr);
+        }
 
         log('ANALYSIS COMPLETE ///', 'done');
         await sleep(500);
 
         document.getElementById('terminalWindow').style.display = 'none';
-        renderResults(narData, txnData.transactions || []);
+        renderResults(narData, txnData.transactions || [], healthData);
         unlockChat();
 
       } catch (err) {
@@ -1985,7 +2312,7 @@
       return (v < 0 ? '-' : '+') + '$' + a.toFixed(2);
     }
 
-    function renderResults(rawData, transactions) {
+    function renderResults(rawData, transactions, healthReport = null) {
       const data = unwrap(rawData);
       const s    = data.summary_stats || {};
       const net  = s.net_cash_flow || 0;
@@ -2005,6 +2332,8 @@
           <div class="stat-value ${c.cls}">${c.val}</div>
           <div class="stat-sub">${c.sub}</div>
         </div>`).join('');
+
+      renderHealthCard(healthReport || data.health_breakdown || null);
 
       // Transaction table
       _allTransactions = transactions;

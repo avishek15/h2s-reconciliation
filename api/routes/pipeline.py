@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -48,72 +49,83 @@ async def reconcile(
             detail="No files found for this batch. Please re-upload your statements.",
         )
 
-    total = 0
-    for f in files:
-        # Phase 1 — extract text
-        text = await extract_text(f.filename, f.mime_type, f.content_b64)
-
-        # Phase 2 — normalize to transactions
-        transactions = await normalize_to_transactions(f.filename, text)
-
-        # Phase 2b — convert all amounts to USD
-        transactions = await batch_to_usd(transactions)
-
-        account = None
-        if batch.profile_id:
-            account_currency = next(
-                (
-                    str(txn.get("original_currency", txn.get("currency", ""))).upper()
-                    for txn in transactions
-                    if txn.get("original_currency") or txn.get("currency")
-                ),
-                None,
-            )
-            account = await get_or_create_account(
-                db,
-                profile_id=batch.profile_id,
-                account_name=f.filename,
-                currency=account_currency,
-                external_ref=f.filename,
-            )
-
-        for txn in transactions:
-            try:
-                amount = float(txn.get("amount", 0))
-            except (TypeError, ValueError):
-                amount = 0.0
-
-            usd_amount = float(txn.get("amount_usd", amount))
-
-            t = Transaction(
-                id=str(uuid.uuid4()),
-                batch_id=request.batch_id,
-                profile_id=batch.profile_id,
-                account_id=account.id if account else None,
-                date=str(txn.get("date", "")).strip() or "unknown",
-                amount=usd_amount,                           # stored in USD
-                original_amount=amount,                      # original currency amount
-                original_currency=str(txn.get("original_currency", "USD")).upper(),
-                description=str(txn.get("description", "")).strip() or "—",
-                clean_name=str(txn.get("clean_name", "")).strip() or None,
-                category=str(txn.get("category", "Other")).strip(),
-                source_account=f.filename,
-                transaction_type=str(
-                    txn.get("type", "debit" if amount < 0 else "credit")
-                ).strip(),
-                raw_row=str(txn),
-            )
-            db.add(t)
-            total += 1
-
-    batch.transaction_count = total
-    batch.status = "reconciled"
+    batch.status = "processing"
+    batch.completed_at = None
     await db.commit()
 
-    return ReconcileResponse(
-        batch_id=request.batch_id,
-        flags_found=0,
-        patterns_found=0,
-        transaction_count=total,
-        status="complete",
-    )
+    total = 0
+    try:
+        for f in files:
+            # Phase 1 — extract text
+            text = await extract_text(f.filename, f.mime_type, f.content_b64)
+
+            # Phase 2 — normalize to transactions
+            transactions = await normalize_to_transactions(f.filename, text)
+
+            # Phase 2b — convert all amounts to USD
+            transactions = await batch_to_usd(transactions)
+
+            account = None
+            if batch.profile_id:
+                account_currency = next(
+                    (
+                        str(txn.get("original_currency", txn.get("currency", ""))).upper()
+                        for txn in transactions
+                        if txn.get("original_currency") or txn.get("currency")
+                    ),
+                    None,
+                )
+                account = await get_or_create_account(
+                    db,
+                    profile_id=batch.profile_id,
+                    account_name=f.filename,
+                    currency=account_currency,
+                    external_ref=f.filename,
+                )
+
+            for txn in transactions:
+                try:
+                    amount = float(txn.get("amount", 0))
+                except (TypeError, ValueError):
+                    amount = 0.0
+
+                usd_amount = float(txn.get("amount_usd", amount))
+
+                t = Transaction(
+                    id=str(uuid.uuid4()),
+                    batch_id=request.batch_id,
+                    profile_id=batch.profile_id,
+                    account_id=account.id if account else None,
+                    date=str(txn.get("date", "")).strip() or "unknown",
+                    amount=usd_amount,                           # stored in USD
+                    original_amount=amount,                      # original currency amount
+                    original_currency=str(txn.get("original_currency", "USD")).upper(),
+                    description=str(txn.get("description", "")).strip() or "—",
+                    clean_name=str(txn.get("clean_name", "")).strip() or None,
+                    category=str(txn.get("category", "Other")).strip(),
+                    source_account=f.filename,
+                    transaction_type=str(
+                        txn.get("type", "debit" if amount < 0 else "credit")
+                    ).strip(),
+                    raw_row=str(txn),
+                )
+                db.add(t)
+                total += 1
+
+        batch.transaction_count = total
+        batch.status = "completed"
+        batch.completed_at = datetime.utcnow()
+        await db.commit()
+
+        return ReconcileResponse(
+            batch_id=request.batch_id,
+            flags_found=0,
+            patterns_found=0,
+            transaction_count=total,
+            status="complete",
+        )
+    except Exception:
+        batch.status = "failed"
+        batch.completed_at = datetime.utcnow()
+        await db.commit()
+        raise

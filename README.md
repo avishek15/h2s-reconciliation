@@ -1,6 +1,6 @@
 # H2S Finance Productivity Agent
 
-> Cross-border finance productivity agent using **FastAPI**, **Google ADK + Gemini**, and a real **Drive MCP** endpoint on **Cloud Run**.
+> Cross-border finance productivity agent using **FastAPI**, **Google ADK + Gemini**, and real **Drive + Health MCP** endpoints on **Cloud Run**.
 
 **H2S Track 1 Submission** — Build and deploy an AI system that coordinates agents, tools, and structured data to complete real finance workflows.
 
@@ -19,6 +19,7 @@ Current capabilities:
 - anomaly, recurring-pattern, and narrative analysis via ADK + Gemini
 - workflow foundation for monthly review, goal planning, and memory capture
 - real Streamable HTTP Drive MCP mounted at `/mcp/drive`
+- real Streamable HTTP Health MCP mounted at `/mcp/health`
 
 The user-facing goal is simple: users log in through the UI, connect Google Drive once, and then trigger finance actions without handling MCP tokens or API keys.
 
@@ -35,7 +36,9 @@ GET  /api/v1/auth/google/start        ← Start Google OAuth for Drive
 POST /api/v1/workflows/monthly-review ← Workflow shell, Drive-first
 POST /api/v1/workflows/goal-planning  ← Persist explicit financial goals
 POST /api/v1/workflows/memory-capture ← Persist explicit memory/rules/cash tags
+GET  /api/v1/reports/health           ← Full-batch financial health report
 POST /mcp/drive                       ← Streamable HTTP Drive MCP endpoint
+POST /mcp/health                      ← Streamable HTTP Health MCP endpoint
 ```
 
 Drive MCP tools:
@@ -283,6 +286,15 @@ Expected unauthenticated result:
 ```text
 HTTP/2 401
 {"error": "invalid_token", "error_description": "Authentication required"}
+```
+
+Verify the health MCP route is deployed:
+
+```bash
+curl -sS -i -X POST "${URL}/mcp/health" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"0.1"}}}'
 ```
 
 After logging in through the UI or `/api/v1/auth/login`, use the returned app JWT:

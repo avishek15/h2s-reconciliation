@@ -10,6 +10,7 @@ load_dotenv()
 
 from core.database import init_db
 from core.drive_mcp import drive_mcp, drive_mcp_app
+from core.health_mcp import health_mcp, health_mcp_app
 from api.routes import (
     uploads,
     pipeline,
@@ -28,7 +29,8 @@ from api.routes import (
 async def lifespan(app: FastAPI):
     await init_db()
     async with drive_mcp.session_manager.run():
-        yield
+        async with health_mcp.session_manager.run():
+            yield
 
 
 app = FastAPI(
@@ -61,7 +63,8 @@ app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(demo.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1/admin")
 
-app.mount("/mcp", drive_mcp_app)
+app.mount("/mcp/drive", drive_mcp_app)
+app.mount("/mcp/health", health_mcp_app)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

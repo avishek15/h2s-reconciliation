@@ -152,14 +152,14 @@ class BatchOrchestratorTool:
                 update(UploadBatch)
                 .where(UploadBatch.batch_id == batch_id)
                 .values(
-                    status="reconciled",
+                    status="processing",
                     transaction_count=total_transactions,
                 )
             )
             await db.commit()
 
             if status_callback:
-                await status_callback("reconciled")
+                await status_callback("processing")
 
             # Phase 3: Run multi-agent analysis
             print(f"[BatchOrchestrator] Starting multi-agent analysis for batch {batch_id}")
@@ -191,6 +191,7 @@ class BatchOrchestratorTool:
                 .where(UploadBatch.batch_id == batch_id)
                 .values(
                     status="completed",
+                    completed_at=datetime.utcnow(),
                 )
             )
             await db.commit()
@@ -217,7 +218,7 @@ class BatchOrchestratorTool:
                 await db.execute(
                     update(UploadBatch)
                     .where(UploadBatch.batch_id == batch_id)
-                    .values(status="failed")
+                    .values(status="failed", completed_at=datetime.utcnow())
                 )
                 await db.commit()
             except Exception as inner:
