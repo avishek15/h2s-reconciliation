@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models import UploadResponse
 from core.auth import get_current_user
-from core.database import UploadBatch, BatchFile, User, Profile, get_db
+from core.database import UploadBatch, BatchFile, User, Profile, _iso, get_db
 
 router = APIRouter()
 
@@ -85,5 +85,5 @@ async def upload_files(
         file_count=len(files),
         transaction_count=len(files),  # actual count comes from Gemini analysis
         status="uploaded",
-        created_at=batch.created_at.isoformat(),
+        created_at=_iso(batch.created_at),
     )

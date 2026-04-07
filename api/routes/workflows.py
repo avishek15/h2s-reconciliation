@@ -12,7 +12,7 @@ from api.models import (
     WorkflowRunResponse,
 )
 from core.auth import get_current_user, get_owned_profile
-from core.database import Profile, Transaction, User, WorkflowRun, get_db
+from core.database import Profile, Transaction, User, WorkflowRun, _iso, get_db
 from core.services.profile_data import (
     create_cash_allocation,
     create_categorization_rule,
@@ -34,8 +34,8 @@ def workflow_response(workflow_run: WorkflowRun, *, next_step: str) -> WorkflowR
         status=workflow_run.status,
         result_summary=workflow_run.result_summary,
         next_step=next_step,
-        started_at=workflow_run.started_at.isoformat(),
-        completed_at=workflow_run.completed_at.isoformat() if workflow_run.completed_at else None,
+        started_at=_iso(workflow_run.started_at),
+        completed_at=_iso(workflow_run.completed_at),
         metadata=workflow_run.metadata_json or {},
     )
 

@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from sqlalchemy import select
 
 from core.config import settings
-from core.database import AsyncSessionLocal, Profile, UploadBatch
+from core.database import AsyncSessionLocal, Profile, UploadBatch, _iso
 from core.google_drive import GoogleDriveService
 from core.google_drive_sync import GoogleDriveSyncService
 from core.auth import get_owned_profile
@@ -53,8 +53,8 @@ async def _latest_batch_payload(profile_id: str) -> dict[str, Any]:
         "batch_status": batch.status,
         "file_count": batch.file_count,
         "transaction_count": batch.transaction_count,
-        "created_at": batch.created_at.isoformat() if batch.created_at else None,
-        "completed_at": batch.completed_at.isoformat() if batch.completed_at else None,
+        "created_at": _iso(batch.created_at),
+        "completed_at": _iso(batch.completed_at),
     }
 
 

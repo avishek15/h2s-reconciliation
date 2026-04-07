@@ -36,6 +36,7 @@ from core.database import (
     UploadBatch,
     User,
     WorkflowRun,
+    _iso,
     get_db,
 )
 
@@ -153,8 +154,8 @@ async def create_profile(
         profile_name=profile.profile_name,
         google_drive_folder_name=profile.google_drive_folder_name,
         connected=profile.google_drive_access_token is not None,
-        created_at=profile.created_at.isoformat(),
-        last_synced=profile.last_synced.isoformat() if profile.last_synced else None,
+        created_at=_iso(profile.created_at),
+        last_synced=_iso(profile.last_synced),
     )
 
 
@@ -177,8 +178,8 @@ async def get_profiles(
             profile_name=p.profile_name,
             google_drive_folder_name=p.google_drive_folder_name,
             connected=p.google_drive_access_token is not None,
-            created_at=p.created_at.isoformat(),
-            last_synced=p.last_synced.isoformat() if p.last_synced else None,
+            created_at=_iso(p.created_at),
+            last_synced=_iso(p.last_synced),
         )
         for p in profiles
     ]
@@ -212,8 +213,8 @@ async def get_profile(
         profile_name=profile.profile_name,
         google_drive_folder_name=profile.google_drive_folder_name,
         connected=profile.google_drive_access_token is not None,
-        created_at=profile.created_at.isoformat(),
-        last_synced=profile.last_synced.isoformat() if profile.last_synced else None,
+        created_at=_iso(profile.created_at),
+        last_synced=_iso(profile.last_synced),
     )
 
 
@@ -236,8 +237,8 @@ async def get_current_user_info(
             profile_name=p.profile_name,
             google_drive_folder_name=p.google_drive_folder_name,
             connected=p.google_drive_access_token is not None,
-            created_at=p.created_at.isoformat(),
-            last_synced=p.last_synced.isoformat() if p.last_synced else None,
+            created_at=_iso(p.created_at),
+            last_synced=_iso(p.last_synced),
         )
         for p in profiles
     ]
@@ -287,8 +288,8 @@ async def get_latest_batch_for_profile(
         "status": batch.status,
         "file_count": batch.file_count,
         "transaction_count": batch.transaction_count,
-        "created_at": batch.created_at.isoformat(),
-        "completed_at": batch.completed_at.isoformat() if batch.completed_at else None,
+        "created_at": _iso(batch.created_at),
+        "completed_at": _iso(batch.completed_at),
     }
 
 

@@ -1,5 +1,6 @@
+import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -9,8 +10,10 @@ from api.models import ReconcileRequest, ReconcileResponse
 from core.auth import get_current_user, get_owned_batch
 from core.database import BatchFile, Transaction, User, get_db
 from core.exchange import batch_to_usd
-from core.ingestion import extract_text, normalize_to_transactions
+from core.ingestion import extract_text, normalize_to_transactions, process_files_concurrently
 from core.services.profile_data import get_or_create_account
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -31,6 +34,11 @@ async def reconcile(
 
     Session isolation: all queries are filtered by batch_id.
     """
+    import time
+    t0 = time.time()
+
+    logger.info(f"[RECONCILE] === START batch_id={request.batch_id} user={current_user.id} ===")
+
     batch = await get_owned_batch(db, request.batch_id, current_user.id)
     if not batch:
         raise HTTPException(
@@ -49,21 +57,27 @@ async def reconcile(
             detail="No files found for this batch. Please re-upload your statements.",
         )
 
+    logger.info(f"[RECONCILE] Found {len(files)} files: {[f.filename for f in files]}")
+
     batch.status = "processing"
     batch.completed_at = None
     await db.commit()
 
     total = 0
     try:
-        for f in files:
-            # Phase 1 — extract text
-            text = await extract_text(f.filename, f.mime_type, f.content_b64)
+        file_args = [(f.filename, f.mime_type, f.content_b64) for f in files]
 
-            # Phase 2 — normalize to transactions
-            transactions = await normalize_to_transactions(f.filename, text)
+        t1 = time.time()
+        logger.info(f"[RECONCILE] Starting file processing ({len(file_args)} files)...")
+        all_txn_batches = await process_files_concurrently(file_args, max_concurrent=2)
+        logger.info(f"[RECONCILE] File processing done in {time.time()-t1:.2f}s")
 
-            # Phase 2b — convert all amounts to USD
+        t2 = time.time()
+        for f, transactions in zip(files, all_txn_batches):
+            logger.info(f"[RECONCILE] File {f.filename}: {len(transactions)} raw transactions")
+
             transactions = await batch_to_usd(transactions)
+            logger.info(f"[RECONCILE] Currency conversion done for {f.filename}")
 
             account = None
             if batch.profile_id:
@@ -75,6 +89,7 @@ async def reconcile(
                     ),
                     None,
                 )
+                t3 = time.time()
                 account = await get_or_create_account(
                     db,
                     profile_id=batch.profile_id,
@@ -82,6 +97,7 @@ async def reconcile(
                     currency=account_currency,
                     external_ref=f.filename,
                 )
+                logger.info(f"[RECONCILE] Account resolved for {f.filename} in {time.time()-t3:.2f}s")
 
             for txn in transactions:
                 try:
@@ -97,8 +113,8 @@ async def reconcile(
                     profile_id=batch.profile_id,
                     account_id=account.id if account else None,
                     date=str(txn.get("date", "")).strip() or "unknown",
-                    amount=usd_amount,                           # stored in USD
-                    original_amount=amount,                      # original currency amount
+                    amount=usd_amount,
+                    original_amount=amount,
                     original_currency=str(txn.get("original_currency", "USD")).upper(),
                     description=str(txn.get("description", "")).strip() or "—",
                     clean_name=str(txn.get("clean_name", "")).strip() or None,
@@ -112,10 +128,15 @@ async def reconcile(
                 db.add(t)
                 total += 1
 
+        logger.info(f"[RECONCILE] DB inserts done in {time.time()-t2:.2f}s, {total} transactions")
+
         batch.transaction_count = total
         batch.status = "completed"
-        batch.completed_at = datetime.utcnow()
+        batch.completed_at = datetime.now(timezone.utc)
         await db.commit()
+
+        elapsed = time.time() - t0
+        logger.info(f"[RECONCILE] === COMPLETE batch_id={request.batch_id} in {elapsed:.2f}s — {total} transactions ===")
 
         return ReconcileResponse(
             batch_id=request.batch_id,
@@ -124,8 +145,10 @@ async def reconcile(
             transaction_count=total,
             status="complete",
         )
-    except Exception:
+    except Exception as e:
+        elapsed = time.time() - t0
+        logger.error(f"[RECONCILE] === FAILED batch_id={request.batch_id} after {elapsed:.2f}s: {e} ===")
         batch.status = "failed"
-        batch.completed_at = datetime.utcnow()
+        batch.completed_at = datetime.now(timezone.utc)
         await db.commit()
         raise

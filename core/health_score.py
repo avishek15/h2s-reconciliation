@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from core.database import _iso
 from statistics import mean, pstdev
 from typing import Any, Optional, Sequence
 
@@ -464,8 +465,8 @@ async def get_batch_health_report(batch_id: str, db: Optional[AsyncSession] = No
         report = analyze_transactions(transactions)
         report["batch_id"] = batch_id
         report["batch_status"] = batch.status
-        report["batch_created_at"] = batch.created_at.isoformat() if batch.created_at else None
-        report["batch_completed_at"] = batch.completed_at.isoformat() if getattr(batch, "completed_at", None) else None
+        report["batch_created_at"] = _iso(batch.created_at)
+        report["batch_completed_at"] = _iso(batch.completed_at) if getattr(batch, "completed_at", None) else None
         return report
     finally:
         if owns_db and db:

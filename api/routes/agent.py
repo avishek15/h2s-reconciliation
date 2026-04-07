@@ -10,7 +10,7 @@ from google.genai import types as genai_types
 
 from api.models import ChatRequest, ChatResponse, NarrativeRequest, NarrativeResponse
 from core.auth import get_current_user, get_owned_batch
-from core.database import AIReport, Transaction, User, get_db
+from core.database import AIReport, Transaction, User, _iso, get_db
 from core.gemini_client import get_gemini_client, get_gemini_model_id
 from agent.money_story_agent import run_agent
 
@@ -67,7 +67,7 @@ async def generate_narrative(
                 batch_id=request.batch_id,
                 report_id=existing_report.id,
                 narrative=deserialize_narrative_payload(existing_report.narrative),
-                created_at=existing_report.created_at.isoformat(),
+                created_at=_iso(existing_report.created_at),
             )
 
     agent_result = await run_agent(request.batch_id, request.query)
@@ -86,7 +86,7 @@ async def generate_narrative(
         batch_id=request.batch_id,
         report_id=report_id,
         narrative=agent_result,
-        created_at=report.created_at.isoformat(),
+        created_at=_iso(report.created_at),
     )
 
 
