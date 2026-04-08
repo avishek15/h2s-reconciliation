@@ -1,7 +1,50 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+# ── Auth (Login & Registration) ─────────────────────────────────────────────
+
+class SignupRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    username: str
+
+
+# ── Profile Management ──────────────────────────────────────────────────────
+
+class CreateProfileRequest(BaseModel):
+    profile_name: str
+    google_drive_folder_id: Optional[str] = None
+    google_drive_folder_name: Optional[str] = None
+
+
+class ProfileResponse(BaseModel):
+    id: str
+    profile_name: str
+    google_drive_folder_name: Optional[str]
+    connected: bool
+    created_at: str
+    last_synced: Optional[str]
+
+
+class UserProfilesResponse(BaseModel):
+    user_id: str
+    username: str
+    profiles: list[ProfileResponse]
 
 
 # ── Upload ──────────────────────────────────────────────────────────────────
@@ -42,6 +85,54 @@ class NarrativeResponse(BaseModel):
     created_at: str
 
 
+# ── Workflows ────────────────────────────────────────────────────────────────
+
+class WorkflowBaseRequest(BaseModel):
+    profile_id: str
+    user_request: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class MonthlyReviewWorkflowRequest(WorkflowBaseRequest):
+    pass
+
+
+class GoalPlanningWorkflowRequest(WorkflowBaseRequest):
+    goal_type: Optional[str] = None
+    title: Optional[str] = None
+    target_amount: Optional[float] = None
+    currency: Optional[str] = None
+    cadence: Optional[str] = None
+    start_date: Optional[str] = None
+
+
+class MemoryCaptureWorkflowRequest(WorkflowBaseRequest):
+    capture_type: Optional[str] = None
+    fact_type: Optional[str] = None
+    content: Optional[str] = None
+    linked_transaction_id: Optional[str] = None
+    match_type: Optional[str] = None
+    match_value: Optional[str] = None
+    category: Optional[str] = None
+    clean_name: Optional[str] = None
+    transaction_id: Optional[str] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    description: Optional[str] = None
+
+
+class WorkflowRunResponse(BaseModel):
+    workflow_run_id: str
+    profile_id: str
+    workflow_type: str
+    status: str
+    result_summary: Optional[str]
+    next_step: str
+    started_at: str
+    completed_at: Optional[str]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 # ── Reports ─────────────────────────────────────────────────────────────────
 
 class SummaryReportResponse(BaseModel):
@@ -52,6 +143,34 @@ class SummaryReportResponse(BaseModel):
 class RecurringReportResponse(BaseModel):
     batch_id: str
     data: dict[str, Any]
+
+
+class HealthSubscoreItem(BaseModel):
+    score: int
+    max_score: int
+    detail: Optional[str] = None
+
+
+class HealthDriverItem(BaseModel):
+    label: str
+    impact: int
+    detail: str
+
+
+class HealthReportResponse(BaseModel):
+    batch_id: str
+    batch_status: Optional[str] = None
+    batch_created_at: Optional[str] = None
+    batch_completed_at: Optional[str] = None
+    transaction_count: int
+    score: int
+    status: str
+    summary: str
+    subscores: dict[str, HealthSubscoreItem]
+    drivers: list[HealthDriverItem]
+    recommendations: list[str]
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    date_range: dict[str, Optional[str]] = Field(default_factory=dict)
 
 
 # ── Transactions ─────────────────────────────────────────────────────────────
@@ -75,7 +194,11 @@ class TransactionListResponse(BaseModel):
     offset: int
     limit: int
     transactions: list[TransactionItem]
-
+    #Added fields for health score and insights
+    health_score: Optional[int] = None
+    health_status: Optional[str] = None
+    insights: Optional[list[str]] = None
+    health_breakdown: Optional[dict[str, Any]] = None
 
 # ── Chat ─────────────────────────────────────────────────────────────────────
 

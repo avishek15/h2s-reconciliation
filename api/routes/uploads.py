@@ -2,11 +2,13 @@ import base64
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models import UploadResponse
-from core.database import UploadBatch, BatchFile, get_db
+from core.auth import get_current_user
+from core.database import UploadBatch, BatchFile, User, Profile, _iso, get_db
 
 router = APIRouter()
 
@@ -24,18 +26,35 @@ MIME_MAP = {
 
 @router.post("/uploads", response_model=UploadResponse, tags=["uploads"])
 async def upload_files(
+    profile_id: str,
     files: list[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Upload one or more bank statement files (PDF, CSV, images).
+    Upload one or more bank statement files (PDF, CSV, images) for a specific profile.
     Stores raw file bytes for direct Gemini multimodal analysis.
     Returns a batch_id to use in subsequent agent calls.
+    Requires authentication.
     """
+    # Verify profile belongs to user
+    result = await db.execute(
+        select(Profile).where(
+            (Profile.id == profile_id) & (Profile.user_id == current_user.id)
+        )
+    )
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found or access denied",
+        )
+
     batch_id = str(uuid.uuid4())
 
     batch = UploadBatch(
         batch_id=batch_id,
+        profile_id=profile_id,
         created_at=datetime.utcnow(),
         status="uploaded",
         file_count=len(files),
@@ -66,5 +85,5 @@ async def upload_files(
         file_count=len(files),
         transaction_count=len(files),  # actual count comes from Gemini analysis
         status="uploaded",
-        created_at=batch.created_at.isoformat(),
+        created_at=_iso(batch.created_at),
     )

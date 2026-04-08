@@ -4,15 +4,33 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from core.database import init_db
-from api.routes import uploads, pipeline, reports, agent, transactions, demo, admin
+from core.drive_mcp import drive_mcp, drive_mcp_app
+from core.health_mcp import health_mcp, health_mcp_app
+from api.routes import (
+    uploads,
+    pipeline,
+    reports,
+    agent,
+    transactions,
+    demo,
+    admin,
+    auth,
+    google_drive,
+    workflows,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    yield
+    async with drive_mcp.session_manager.run():
+        async with health_mcp.session_manager.run():
+            yield
 
 
 app = FastAPI(
@@ -34,7 +52,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(uploads.router, prefix="/api/v1")
+app.include_router(google_drive.router, prefix="/api/v1")
+app.include_router(workflows.router, prefix="/api/v1/workflows")
 app.include_router(pipeline.router, prefix="/api/v1/pipeline")
 app.include_router(reports.router, prefix="/api/v1/reports")
 app.include_router(agent.router, prefix="/api/v1/agent")
@@ -42,6 +63,8 @@ app.include_router(transactions.router, prefix="/api/v1")
 app.include_router(demo.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1/admin")
 
+app.mount("/mcp/drive", drive_mcp_app)
+app.mount("/mcp/health", health_mcp_app)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

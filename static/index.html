@@ -204,6 +204,28 @@
     .process-btn span { position: relative; z-index: 1; }
     .process-btn:disabled { opacity: .22; cursor: not-allowed; background: transparent; border-color: var(--border-2); color: var(--text-dim); }
     .process-btn:disabled::before { display: none; }
+    .process-btn.process-btn--secondary {
+      padding: 14px;
+      font-size: 14px;
+      letter-spacing: 0.16em;
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green-bright);
+    }
+    .process-btn.process-btn--secondary::before { background: var(--green); }
+    .process-btn.process-btn--secondary:hover:not(:disabled) { color: var(--bg); }
+    .upload-actions { display: grid; gap: 12px; }
+    .profile-context {
+      margin-bottom: 18px;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+    .profile-context strong { color: var(--text-white); }
 
     /* ── Analysis panel ── */
     .terminal {
@@ -240,6 +262,36 @@
     .results { display: none; }
     .results.results--visible { display: block; }
 
+    .processing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 6px;
+      border: 2px solid var(--amber);
+      background: linear-gradient(135deg, rgba(240,165,0,0.2), rgba(240,165,0,0.1));
+      color: var(--amber-bright);
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      box-shadow: inset 0 0 20px rgba(240,165,0,0.15), 0 0 15px rgba(240,165,0,0.2);
+    }
+    .processing-indicator.hidden { display: none; }
+    .processing-indicator .spinner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: pulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 8px var(--amber);
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
     /* Stat grid */
     .stats-grid {
       display: grid; grid-template-columns: repeat(4,1fr);
@@ -256,6 +308,202 @@
     .stat-value.pos { color: var(--green-bright); }
     .stat-value.neg { color: var(--red-bright); }
     .stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
+
+    /* Health panel */
+    .health-card {
+      background: linear-gradient(180deg, rgba(240,165,0,0.08), rgba(15,18,25,0.96));
+      border: 1px solid rgba(240,165,0,0.28);
+      border-radius: 2px;
+      padding: 18px 18px 16px;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeUp .4s ease forwards;
+    }
+    .health-card.hidden { display: none; }
+    .health-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .health-score-wrap {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      min-width: 0;
+    }
+    .health-score {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .health-score-value {
+      font-family: var(--font-disp);
+      font-size: 54px;
+      line-height: .9;
+      letter-spacing: 0.03em;
+      color: var(--amber);
+    }
+    .health-score-value.no-data { color: var(--text-dim); }
+    .health-score-value.excellent { color: var(--green-bright); }
+    .health-score-value.good { color: var(--green); }
+    .health-score-value.average { color: var(--amber); }
+    .health-score-value.poor { color: var(--red-bright); }
+    .health-score-label {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .health-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 9px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--text-bright);
+      background: var(--surface);
+      margin-top: 6px;
+    }
+    .health-status.excellent { border-color: var(--green); color: var(--green-bright); background: var(--green-dim); }
+    .health-status.good { border-color: rgba(29,184,122,.4); color: var(--green-bright); background: rgba(29,184,122,.08); }
+    .health-status.average { border-color: rgba(240,165,0,.45); color: var(--amber); background: var(--amber-dim); }
+    .health-status.poor { border-color: var(--red); color: var(--red-bright); background: var(--red-dim); }
+    .health-status.no-data { border-color: var(--border-2); color: var(--text-dim); background: var(--surface-2); }
+    .health-summary {
+      max-width: 600px;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-bright);
+      text-align: right;
+    }
+    .health-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    .health-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      background: var(--surface);
+    }
+    .health-pill strong { color: var(--text-bright); font-weight: 600; }
+    .health-subgrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .health-subscore {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 10px;
+    }
+    .health-subscore-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .health-subscore-value {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-family: var(--font-disp);
+      color: var(--amber);
+      line-height: 1;
+    }
+    .health-subscore-value strong {
+      font-size: 20px;
+      letter-spacing: 0.03em;
+    }
+    .health-subscore-value span {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+    .health-drivers {
+      display: grid;
+      gap: 8px;
+    }
+    .health-driver {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-bright);
+    }
+    .health-driver:first-child { border-top: none; }
+    .health-driver-imp {
+      flex-shrink: 0;
+      min-width: 42px;
+      text-align: center;
+      padding: 3px 6px;
+      border-radius: 2px;
+      font-family: var(--font-disp);
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: var(--surface-2);
+    }
+    .health-driver-imp.pos {
+      color: var(--green-bright);
+      border-color: rgba(29,184,122,.35);
+      background: rgba(29,184,122,.08);
+    }
+    .health-driver-imp.neg {
+      color: var(--red-bright);
+      border-color: rgba(217,64,64,.35);
+      background: rgba(217,64,64,.08);
+    }
+    .health-driver-body { min-width: 0; }
+    .health-driver-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+    .health-driver-detail {
+      color: var(--text-bright);
+      line-height: 1.7;
+    }
+    .health-rec-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .health-rec-item {
+      padding: 6px 9px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-bright);
+      font-size: 11px;
+      line-height: 1.6;
+    }
 
     /* Transaction table */
     .txn-wrap {
@@ -461,16 +709,21 @@
 
     @media (max-width: 900px) {
       .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .health-subgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .txn-head, .txn-row { grid-template-columns: 80px 1fr 90px; }
       .txn-head > :nth-child(3), .txn-row > :nth-child(3) { display: none; }
       .two-col    { grid-template-columns: 1fr; }
       .actions-row{ grid-template-columns: 1fr; }
+      .health-header { flex-direction: column; }
+      .health-summary { text-align: left; max-width: none; }
+      .health-meta { justify-content: flex-start; }
     }
     @media (max-width: 580px) {
       .main { padding: 24px 14px 60px; }
       .header, .tabs { padding-left: 14px; padding-right: 14px; }
       .header-right .h-badge:not(.wipe-btn) { display: none; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
+      .health-subgrid { grid-template-columns: 1fr 1fr; }
     }
   /* ── Chart section ── */
   .chart-section {
@@ -498,10 +751,345 @@
   .legend-item.hidden { opacity: 0.3; }
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .chart-canvas-wrap { position: relative; height: 220px; }
+    /* ── Auth Screen Styles ── */
+    .auth-screen {
+      position: fixed; inset: 0; z-index: 2000;
+      background: var(--bg); display: flex; align-items: center; justify-content: center;
+      transition: opacity .3s, visibility .3s;
+    }
+    .auth-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .auth-container {
+      width: 100%; max-width: 420px; padding: 40px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .auth-logo {
+      text-align: center; margin-bottom: 32px;
+    }
+    .auth-logo-word {
+      font-family: var(--font-disp); font-size: 48px;
+      letter-spacing: 0.1em; color: var(--amber);
+      text-shadow: 0 0 20px var(--amber-glow);
+    }
+    .auth-logo-sub { font-size: 11px; letter-spacing: 0.12em; color: var(--text-dim); margin-top: 6px; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-label {
+      display: block; font-size: 11px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text); margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%; padding: 12px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-bright); font-family: var(--font-mono);
+      font-size: 12px; border-radius: 2px; outline: none;
+      transition: border-color .2s;
+    }
+    .form-input:focus { border-color: var(--amber); }
+    .form-input::placeholder { color: var(--text-dim); }
+    .form-error {
+      color: var(--red-bright); font-size: 10px;
+      margin-top: 5px; display: none;
+    }
+    .form-error.show { display: block; }
+    .form-submit {
+      width: 100%; padding: 14px;
+      background: var(--amber-dim); border: 1px solid var(--amber);
+      color: var(--amber); font-family: var(--font-disp);
+      font-size: 18px; letter-spacing: 0.12em;
+      cursor: pointer; border-radius: 2px; margin-top: 24px;
+      transition: all .2s; position: relative; overflow: hidden;
+    }
+    .form-submit::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--amber); transform: scaleX(0); transform-origin: left;
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .form-submit:hover:not(:disabled)::before { transform: scaleX(1); }
+    .form-submit:hover:not(:disabled) { color: var(--bg); }
+    .form-submit span { position: relative; z-index: 1; }
+    .form-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-toggle {
+      text-align: center; margin-top: 16px;
+      font-size: 11px; color: var(--text-dim);
+    }
+    .form-toggle-btn {
+      background: none; border: none; color: var(--amber);
+      cursor: pointer; font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.08em; transition: color .2s;
+      text-decoration: underline;
+    }
+    .form-toggle-btn:hover { color: var(--amber-bright); }
+    .auth-maintenance {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+    }
+    .auth-wipe-btn {
+      background: none;
+      border: 1px solid var(--border-2);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 7px 14px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all .2s;
+    }
+    .auth-wipe-btn:hover {
+      border-color: var(--red);
+      color: var(--red-bright);
+    }
+
+    /* ── Profile Screen Styles ── */
+    .profile-screen {
+      position: fixed; inset: 0; z-index: 2000;
+      background: var(--bg); display: flex; align-items: center; justify-content: center;
+      transition: opacity .3s, visibility .3s;
+    }
+    .profile-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .profile-container {
+      width: 100%; max-width: 500px; padding: 40px;
+    }
+    .profile-title {
+      font-family: var(--font-disp); font-size: 42px;
+      letter-spacing: 0.08em; color: var(--text-white); margin-bottom: 8px;
+    }
+    .profile-sub { font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em; margin-bottom: 32px; }
+    .profile-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .profile-card {
+      background: var(--surface); border: 2px solid var(--border);
+      padding: 20px 16px; cursor: pointer; border-radius: 2px;
+      transition: all .2s; position: relative;
+    }
+    .profile-card:hover {
+      border-color: var(--amber); box-shadow: 0 0 30px var(--amber-glow);
+    }
+    .connect-gdrive-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .connect-gdrive-btn:hover {
+      background: var(--green-bright);
+    }
+    .delete-profile-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: transparent;
+      color: var(--red-bright);
+      border: 1px solid var(--red);
+      border-radius: 3px;
+      padding: 3px 7px;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .delete-profile-btn:hover {
+      background: var(--red-dim);
+    }
+    .profile-name {
+      font-family: var(--font-disp); font-size: 18px;
+      letter-spacing: 0.06em; color: var(--text-white);
+      margin-bottom: 8px;
+    }
+    .profile-info {
+      font-size: 10px; color: var(--text-dim); letter-spacing: 0.06em;
+    }
+    .profile-empty-msg {
+      text-align: center; padding: 40px;
+      color: var(--text-dim); font-size: 12px;
+    }
+    .new-profile-btn {
+      width: 100%; padding: 12px;
+      background: var(--surface); border: 2px dashed var(--border-2);
+      color: var(--text-dim); font-family: var(--font-mono);
+      font-size: 12px; letter-spacing: 0.08em;
+      cursor: pointer; border-radius: 2px; transition: all .2s;
+    }
+    .new-profile-btn:hover {
+      border-color: var(--amber); color: var(--amber);
+    }
+
+    /* ── Header User Info ── */
+    .user-info {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .user-badge {
+      font-size: 10px; letter-spacing: 0.1em; color: var(--text);
+      text-transform: uppercase;
+    }
+    .profile-switch-btn {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-dim); font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 5px 12px; cursor: pointer; border-radius: 2px;
+      transition: all .2s; margin-left: 8px;
+    }
+    .profile-switch-btn:hover { border-color: var(--amber); color: var(--amber); }
+    .logout-btn {
+      background: none; border: 1px solid var(--border-2);
+      color: var(--text-dim); font-family: var(--font-mono);
+      font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 5px 12px; cursor: pointer; border-radius: 2px; transition: all .2s;
+    }
+    .logout-btn:hover { border-color: var(--red); color: var(--red-bright); }
+
+    /* Modal helpers */
+    code { 
+      background: var(--surface); 
+      padding: 2px 6px; 
+      border-radius: 2px;
+      font-size: 0.9em;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+
+  <!-- ── Auth Screen ── -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <div class="auth-logo-word">RECON</div>
+        <div class="auth-logo-sub">Financial Analysis Terminal</div>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Username or Email</label>
+          <input type="text" class="form-input" id="loginUsername" placeholder="Enter your username" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password" required>
+        </div>
+        <div class="form-error" id="loginError"></div>
+        <button type="submit" class="form-submit" id="loginBtn">
+          <span>SIGN IN</span>
+        </button>
+        <div class="form-toggle">
+          Don't have an account? 
+          <button type="button" class="form-toggle-btn" onclick="switchAuthForm('signup')">Create one</button>
+        </div>
+      </form>
+
+      <!-- Signup Form -->
+      <form class="auth-form" id="signupForm" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-input" id="signupUsername" placeholder="Choose a username" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 characters" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" class="form-input" id="signupPasswordConfirm" placeholder="Confirm password" required>
+        </div>
+        <div class="form-error" id="signupError"></div>
+        <button type="submit" class="form-submit" id="signupBtn">
+          <span>CREATE ACCOUNT</span>
+        </button>
+        <div class="form-toggle">
+          Already have an account? 
+          <button type="button" class="form-toggle-btn" onclick="switchAuthForm('login')">Sign in</button>
+        </div>
+      </form>
+
+      <div class="auth-maintenance">
+        <button type="button" class="auth-wipe-btn" onclick="wipeData()">Wipe DB</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Profile Selection Screen ── -->
+  <div class="profile-screen hidden" id="profileScreen">
+    <div class="profile-container">
+      <div class="profile-title">SELECT PROFILE</div>
+      <div class="profile-sub">// Choose a profile to upload statements or sync an attached Drive folder</div>
+      <div class="profile-grid" id="profileGrid"></div>
+      <button class="new-profile-btn" onclick="createNewProfile()">+ CREATE NEW PROFILE</button>
+    </div>
+  </div>
+
+  <!-- ── Create Profile Modal ── -->
+  <div class="auth-screen hidden" id="createProfileModal">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <div class="auth-logo-word">NEW PROFILE</div>
+        <div class="auth-logo-sub">Google Drive is optional for this profile</div>
+      </div>
+
+      <form id="createProfileForm" onsubmit="handleCreateProfile(event)">
+        <div class="form-group">
+          <label class="form-label">Profile Name</label>
+          <input type="text" class="form-input" id="newProfileName" placeholder="e.g., Personal Banking" required>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:5px">Give this profile a descriptive name</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Google Drive Folder ID</label>
+          <input type="text" class="form-input" id="newProfileFolderId" placeholder="Optional: paste folder ID here">
+          <div style="font-size:10px;color:var(--text-dim);margin-top:5px">
+            Optional. Add this only if you want Drive sync for the profile.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Folder Name (Display)</label>
+          <input type="text" class="form-input" id="newProfileFolderName" placeholder="Optional: e.g., Bank Statements 2024">
+          <div style="font-size:10px;color:var(--text-dim);margin-top:5px">Required only if you provide a folder ID</div>
+        </div>
+
+        <div class="form-error" id="createProfileError"></div>
+
+        <button type="submit" class="form-submit" id="createProfileBtn" style="margin-top:28px">
+          <span>CREATE PROFILE</span>
+        </button>
+
+        <div class="form-toggle">
+          <button type="button" class="form-toggle-btn" onclick="closeCreateProfileModal()" style="text-decoration:none">Cancel</button>
+        </div>
+      </form>
+
+      <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:16px">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.06em">📖 HOW TO FIND YOUR FOLDER ID:</div>
+        <ol style="font-size:10px;color:var(--text-dim);line-height:1.8;margin-left:16px">
+          <li>Open Google Drive and navigate to your folder</li>
+          <li>Look at the URL: <code style="color:var(--amber);font-family:monospace">drive.google.com/drive/folders/<strong>1ABC123xyz...</strong></code></li>
+          <li>Copy the part after <code style="color:var(--amber);font-family:monospace">folders/</code></li>
+          <li>Paste it above</li>
+        </ol>
+      </div>
+    </div>
+  </div>
 
   <header class="header">
     <div class="logo">
@@ -510,10 +1098,15 @@
       <span class="logo-sub">Financial Analysis Terminal<span class="cursor"></span></span>
     </div>
     <div class="header-right">
-      <span class="h-badge"><span class="dot-live"></span>ONLINE</span>
-      <span class="h-badge">GEMINI 2.5 FLASH</span>
-      <span class="h-badge">GOOGLE ADK</span>
-      <button class="wipe-btn" onclick="wipeData()">WIPE DB</button>
+      <div class="user-info" id="userInfo" style="display:none">
+        <span class="user-badge" id="userBadge">USER</span>
+        <button class="profile-switch-btn" onclick="showProfileScreen()">SWITCH PROFILE</button>
+        <button class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+      </div>
+      <span class="h-badge" id="onlineBadge" style="display:none"><span class="dot-live"></span>ONLINE</span>
+      <span class="h-badge" style="display:none">GEMINI 2.5 FLASH</span>
+      <span class="h-badge" style="display:none">GOOGLE ADK</span>
+      <button class="wipe-btn" onclick="wipeData()" style="display:none">WIPE DB</button>
     </div>
   </header>
 
@@ -528,7 +1121,8 @@
     <!-- ── Upload panel ── -->
     <div class="panel panel--active" id="panel-upload">
       <div class="section-title">UPLOAD STATEMENTS</div>
-      <div class="section-sub">// PDF, CSV, Excel, or image files — Gemini extracts and analyzes your real data</div>
+      <div class="section-sub" id="uploadSub">// PDF, CSV, Excel, or image files — Gemini extracts and analyzes your real data</div>
+      <div class="profile-context" id="profileContext">No profile selected.</div>
 
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" multiple
@@ -543,9 +1137,14 @@
       <div class="file-list" id="fileList"></div>
       <div id="errorArea"></div>
 
-      <button class="process-btn" id="processBtn" disabled onclick="processFiles()">
-        <span>INITIALIZE ANALYSIS</span>
-      </button>
+      <div class="upload-actions">
+        <button class="process-btn process-btn--secondary" id="driveSyncBtn" style="display:none" onclick="syncCurrentProfile()">
+          <span>SYNC GOOGLE DRIVE</span>
+        </button>
+        <button class="process-btn" id="processBtn" disabled onclick="processFiles()">
+          <span>INITIALIZE ANALYSIS</span>
+        </button>
+      </div>
     </div>
 
     <!-- ── Analysis panel ── -->
@@ -561,6 +1160,11 @@
       </div>
 
       <div class="results" id="results">
+        <div class="processing-indicator hidden" id="processingIndicator">
+          <div class="spinner"></div>
+          <div id="processingIndicatorText">Processing your batch, please wait...</div>
+        </div>
+        <div class="health-card hidden" id="healthCard"></div>
         <div class="stats-grid" id="statsGrid"></div>
 
         <div class="chart-section" id="chartSection" style="display:none">
@@ -646,6 +1250,712 @@
   </main>
 
   <script>
+    // ── Authentication State ───────────────────────────────────────────────
+    let jwtToken = localStorage.getItem('jwtToken');
+    let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    let currentProfile = JSON.parse(localStorage.getItem('currentProfile') || '{}');
+    let userProfiles = [];
+    let _syncStartedAt = null;
+
+    // Initialize auth on page load
+    window.addEventListener('load', async () => {
+      if (jwtToken && currentUser.id) {
+        // Verify token is still valid
+        const isValid = await verifyToken();
+        if (isValid) {
+          await loadUserProfiles();
+          if (currentProfile.id) {
+            showMainApp();
+          } else {
+            showProfileScreen();
+          }
+        } else {
+          clearAuth();
+          showAuthScreen();
+        }
+      } else {
+        showAuthScreen();
+      }
+    });
+
+    function setCurrentProfile(profile) {
+      currentProfile = profile || {};
+      if (currentProfile.id) {
+        localStorage.setItem('currentProfile', JSON.stringify(currentProfile));
+      } else {
+        localStorage.removeItem('currentProfile');
+      }
+      updateUserBadge();
+      updateProfileContextUI();
+    }
+
+    function showAuthScreen() {
+      document.getElementById('authScreen').classList.remove('hidden');
+      document.getElementById('profileScreen').classList.add('hidden');
+      document.querySelector('.header').style.display = 'none';
+      document.querySelector('.tabs').style.display = 'none';
+      document.querySelector('.main').style.display = 'none';
+    }
+
+    function showProfileScreen() {
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('profileScreen').classList.remove('hidden');
+      document.querySelector('.header').style.display = 'flex';
+      document.querySelector('.tabs').style.display = 'flex';
+      document.querySelector('.main').style.display = 'block';
+      updateUserBadge();
+      renderProfileGrid();
+    }
+
+    function showMainApp() {
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('profileScreen').classList.add('hidden');
+      document.querySelector('.header').style.display = 'flex';
+      document.querySelector('.tabs').style.display = 'flex';
+      document.querySelector('.main').style.display = 'block';
+      document.getElementById('userInfo').style.display = 'flex';
+      updateUserBadge();
+      updateProfileContextUI();
+    }
+
+    function updateUserBadge() {
+      const badge = document.getElementById('userBadge');
+      if (badge) {
+        badge.textContent = currentUser.username ? `${currentUser.username} [${currentProfile.profile_name || 'no profile'}]` : 'USER';
+      }
+    }
+
+    function updateProfileContextUI() {
+      const context = document.getElementById('profileContext');
+      const uploadSub = document.getElementById('uploadSub');
+      const syncBtn = document.getElementById('driveSyncBtn');
+
+      if (!context || !uploadSub || !syncBtn) return;
+
+      if (!currentProfile.id) {
+        context.textContent = 'No profile selected.';
+        uploadSub.textContent = '// Select a profile to upload files or sync Google Drive';
+        syncBtn.style.display = 'none';
+        return;
+      }
+
+      const profileName = esc(currentProfile.profile_name || 'Unnamed');
+      const folderName = esc(currentProfile.google_drive_folder_name || '');
+      const driveReady = Boolean(currentProfile.connected && currentProfile.google_drive_folder_name);
+      const driveConfigured = Boolean(currentProfile.google_drive_folder_name);
+
+      if (driveReady) {
+        context.innerHTML = `Profile <strong>${profileName}</strong> is active. Drive folder <strong>${folderName}</strong> is ready to sync, or you can upload files manually.`;
+        uploadSub.textContent = '// Upload files manually or sync the attached Google Drive folder';
+        syncBtn.style.display = '';
+      } else if (driveConfigured) {
+        context.innerHTML = `Profile <strong>${profileName}</strong> is active. A Drive folder is configured, but Google Drive is not connected yet.`;
+        uploadSub.textContent = '// Upload files manually now, or connect Google Drive from the profile screen later';
+        syncBtn.style.display = 'none';
+      } else {
+        context.innerHTML = `Profile <strong>${profileName}</strong> is active. This profile is set up for manual uploads only.`;
+        uploadSub.textContent = '// Upload statement files for this profile';
+        syncBtn.style.display = 'none';
+      }
+    }
+
+    function switchAuthForm(form) {
+      document.getElementById('loginForm').classList.toggle('active', form === 'login');
+      document.getElementById('signupForm').classList.toggle('active', form === 'signup');
+      clearAuthErrors();
+    }
+
+    function showAuthError(msg, form = 'login') {
+      const errorEl = document.getElementById(form + 'Error');
+      if (errorEl) {
+        errorEl.textContent = msg;
+        errorEl.classList.add('show');
+      }
+    }
+
+    function clearAuthErrors() {
+      document.getElementById('loginError').classList.remove('show');
+      document.getElementById('signupError').classList.remove('show');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      clearAuthErrors();
+
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const btn = document.getElementById('loginBtn');
+
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showAuthError(data.detail || 'Login failed', 'login');
+          return;
+        }
+
+        // Save credentials
+        jwtToken = data.access_token;
+        currentUser = {
+          id: data.user_id,
+          username: data.username
+        };
+        localStorage.setItem('jwtToken', jwtToken);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // Load profiles and show selection
+        await loadUserProfiles();
+        showProfileScreen();
+      } catch (err) {
+        showAuthError(err.message, 'login');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      clearAuthErrors();
+
+      const username = document.getElementById('signupUsername').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+      const confirmPassword = document.getElementById('signupPasswordConfirm').value.trim();
+      const btn = document.getElementById('signupBtn');
+
+      if (password !== confirmPassword) {
+        showAuthError('Passwords do not match', 'signup');
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/v1/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showAuthError(data.detail || 'Signup failed', 'signup');
+          return;
+        }
+
+        // Save credentials
+        jwtToken = data.access_token;
+        currentUser = {
+          id: data.user_id,
+          username: data.username
+        };
+        localStorage.setItem('jwtToken', jwtToken);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // Clear form and switch to main app (no profiles yet)
+        document.getElementById('signupForm').reset();
+        userProfiles = [];
+        showProfileScreen();
+      } catch (err) {
+        showAuthError(err.message, 'signup');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function verifyToken() {
+      if (!jwtToken) return false;
+      try {
+        const res = await fetch('/api/v1/me', {
+          headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    async function loadUserProfiles() {
+      if (!jwtToken) return;
+      try {
+        const res = await fetch('/api/v1/profiles', {
+          headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          userProfiles = data.profiles || [];
+          if (currentProfile.id) {
+            const refreshedProfile = userProfiles.find(profile => profile.id === currentProfile.id);
+            setCurrentProfile(refreshedProfile || null);
+          } else {
+            updateProfileContextUI();
+          }
+        }
+      } catch (err) {
+        console.error('Error loading profiles:', err);
+      }
+    }
+
+    function renderProfileGrid() {
+      const grid = document.getElementById('profileGrid');
+      if (!userProfiles || userProfiles.length === 0) {
+        grid.innerHTML = '<div class="profile-empty-msg" style="grid-column:1/-1">No profiles yet. Create one to get started.</div>';
+        return;
+      }
+
+      grid.innerHTML = userProfiles.map(profile => `
+        <div class="profile-card" onclick="selectProfile('${profile.id}')">
+          <div class="profile-name">${esc(profile.profile_name || 'Unnamed')}</div>
+          <div class="profile-info">
+            ${profile.connected
+              ? `Drive ready: ${esc(profile.google_drive_folder_name || 'Connected')}`
+              : profile.google_drive_folder_name
+                ? `Drive folder saved: ${esc(profile.google_drive_folder_name)}`
+                : 'Manual uploads only'}<br>
+            ${profile.last_synced
+              ? `Last sync ${new Date(profile.last_synced).toLocaleString()}`
+              : profile.connected
+                ? 'Ready to sync now'
+                : profile.google_drive_folder_name
+                  ? 'Connect Google Drive to enable sync'
+                  : 'Upload files directly to analyze'}
+          </div>
+          ${(!profile.connected && profile.google_drive_folder_name) ?
+            `<button class="connect-gdrive-btn" onclick="event.stopPropagation(); connectGoogleDrive('${profile.id}')" title="Connect Google Drive">🔗 Connect Drive</button>` : 
+            ''}
+          <button class="delete-profile-btn" onclick="event.stopPropagation(); deleteProfile('${profile.id}', '${esc(profile.profile_name || '')}')" title="Delete profile">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteProfile(profileId, profileName) {
+      const ok = confirm(`Delete profile "${profileName || 'Unnamed'}" and all its synced data? This cannot be undone.`);
+      if (!ok) return;
+
+      try {
+        const res = await authFetch(`/api/v1/profiles/${profileId}`, { method: 'DELETE' });
+        if (!res.ok) {
+          let msg = 'Failed to delete profile';
+          try {
+            const data = await res.json();
+            msg = data.detail || data.message || msg;
+          } catch (_) {
+            // keep default message
+          }
+          throw new Error(msg);
+        }
+
+        if (currentProfile && currentProfile.id === profileId) {
+          setCurrentProfile(null);
+          showProfileScreen();
+        }
+
+        await loadUserProfiles();
+        renderProfileGrid();
+        showStatus('Profile deleted successfully.', 'success');
+      } catch (error) {
+        showStatus(`Failed to delete profile: ${error.message}`, 'error');
+      }
+    }
+
+    function selectProfile(profileId) {
+      const profile = userProfiles.find(p => p.id === profileId);
+      if (!profile) {
+        showStatus('Profile not found.', 'error');
+        return;
+      }
+      setCurrentProfile(profile);
+      showMainApp();
+      startOver();
+      showStatus(
+        profile.connected
+          ? `Profile "${profile.profile_name}" ready. Upload files or sync Google Drive.`
+          : `Profile "${profile.profile_name}" ready for manual uploads.`,
+        'info'
+      );
+    }
+
+    async function connectGoogleDrive(profileId) {
+      try {
+        console.log('Starting Google Drive OAuth for profile:', profileId);
+        const res = await authFetch(`/api/v1/auth/google/start?profile_id=${profileId}`);
+        if (!res.ok) {
+          throw new Error('Failed to start OAuth flow');
+        }
+        const data = await res.json();
+        
+        // Open OAuth URL in new window
+        const authWindow = window.open(data.authorization_url, 'google-oauth', 'width=600,height=700');
+        
+        // Poll for completion (check if window is closed and profile is updated)
+        const checkInterval = setInterval(async () => {
+          if (authWindow.closed) {
+            clearInterval(checkInterval);
+            // Refresh profiles to see if connection was successful
+            await loadUserProfiles();
+            renderProfileGrid();
+            showStatus('Google Drive connected successfully!', 'success');
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('OAuth error:', error);
+        showStatus('Failed to connect Google Drive. Please try again.', 'error');
+      }
+    }
+
+    async function syncCurrentProfile() {
+      if (!currentProfile.id) {
+        showStatus('Select a profile before syncing.', 'error');
+        return;
+      }
+      await syncAndLoadReport(currentProfile.id);
+    }
+
+    async function syncAndLoadReport(profileId) {
+      try {
+        // Show loading
+        showStatus('Syncing Google Drive files...', 'info');
+        _syncStartedAt = Date.now();
+
+        // Show the results panel and processing indicator
+        document.getElementById('tab-analysis').classList.remove('tab--disabled');
+        switchTab('analysis');
+        document.getElementById('logOutput').innerHTML = '';
+        document.getElementById('terminalWindow').style.display = '';
+        document.getElementById('results').classList.add('results--visible');
+        showProcessingIndicator('Sync started. Waiting for processing to complete...');
+
+        // Trigger sync
+        const syncRes = await authFetch(`/api/v1/profiles/${profileId}/sync`, {
+          method: 'POST'
+        });
+
+        if (!syncRes.ok) {
+          let msg = 'Failed to start sync';
+          try {
+            const data = await syncRes.json();
+            msg = data.detail || msg;
+          } catch (_) {
+            // keep generic message
+          }
+          throw new Error(msg);
+        }
+
+        // Poll for completion
+        const maxWaitMs = 30 * 60 * 1000;
+        const pollIntervalMs = 1000;
+        let missingBatchCount = 0;
+
+        while (Date.now() - _syncStartedAt < maxWaitMs) {
+          const batchRes = await authFetch(`/api/v1/profiles/${profileId}/latest-batch`);
+          if (batchRes.status === 404) {
+            missingBatchCount++;
+            if (missingBatchCount >= 10) {
+              hideProcessingIndicator();
+              throw new Error('Sync did not create a batch. Google credentials may be invalid or expired. Reconnect Google Drive and retry.');
+            }
+          }
+
+          if (batchRes.ok) {
+            missingBatchCount = 0;
+            const batchData = await batchRes.json();
+            const createdAt = batchData.created_at ? new Date(batchData.created_at).getTime() : null;
+            const completedAt = batchData.completed_at ? new Date(batchData.completed_at).getTime() : null;
+            const elapsedMs = completedAt && createdAt ? completedAt - createdAt : createdAt ? Date.now() - createdAt : Date.now() - _syncStartedAt;
+            showProcessingIndicator(`Batch is ${batchData.status}. Elapsed ${formatDuration(elapsedMs)}.`);
+
+            if (String(batchData.status || '').toLowerCase() === 'failed') {
+              hideProcessingIndicator();
+              throw new Error('Analysis failed. Please check server logs for pipeline errors.');
+            }
+
+            if (String(batchData.status || '').toLowerCase() === 'completed') {
+              // Load the report
+              await loadReport(batchData.batch_id);
+              showStatus(`Analysis complete in ${formatDuration(elapsedMs)}.`, 'success');
+              return;
+            }
+          }
+
+          // Wait 1 second
+          await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+        }
+
+        throw new Error(`Sync is taking longer than expected (${formatDuration(maxWaitMs)} max). Please check server logs.`);
+
+      } catch (error) {
+        console.error('Sync error:', error);
+        hideProcessingIndicator();
+        showStatus(`Failed to sync and analyze data: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadReport(batchIdValue) {
+      try {
+        batchId = batchIdValue;
+        const narrativeRes = await authFetch(`/api/v1/agent/narrative`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batch_id: batchIdValue })
+        });
+        if (!narrativeRes.ok) throw new Error('Failed to load narrative');
+        const narrativeData = await narrativeRes.json();
+
+        const txnRes = await authFetch(`/api/v1/transactions?batch_id=${batchIdValue}&limit=500`);
+        if (!txnRes.ok) throw new Error('Failed to load transactions');
+        const txnData = await txnRes.json();
+
+        let healthData = null;
+        try {
+          healthData = await fetchHealthReport(batchIdValue);
+        } catch (healthErr) {
+          console.warn('Health report unavailable:', healthErr);
+        }
+
+        document.getElementById('terminalWindow').style.display = 'none';
+        renderResults(narrativeData, txnData.transactions || [], healthData);
+        unlockChat();
+
+        // Hide processing indicator after all data is loaded
+        hideProcessingIndicator();
+
+        // Switch to analysis tab
+        switchTab('analysis');
+
+      } catch (error) {
+        console.error('Error loading report:', error);
+        hideProcessingIndicator();
+      }
+    }
+
+    function showStatus(message, type = 'info') {
+      const logOutput = document.getElementById('logOutput');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg agent';
+      msgDiv.innerHTML = `
+        <div class="msg-avatar">R</div>
+        <div class="msg-body">
+          <div class="msg-header">
+            <span class="msg-name">recon</span>
+            <span class="msg-time">${new Date().toLocaleTimeString()}</span>
+          </div>
+          <div class="msg-text">${message}</div>
+        </div>
+      `;
+      logOutput.appendChild(msgDiv);
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    function showProcessingIndicator(message = 'Processing your batch, please wait...') {
+      const el = document.getElementById('processingIndicator');
+      const text = document.getElementById('processingIndicatorText');
+      if (!el || !text) return;
+      text.textContent = message;
+      el.classList.remove('hidden');
+    }
+
+    function hideProcessingIndicator() {
+      const el = document.getElementById('processingIndicator');
+      if (!el) return;
+      el.classList.add('hidden');
+    }
+
+    function displaySummaryReport(data) {
+      const statsGrid = document.getElementById('statsGrid');
+      statsGrid.innerHTML = '';
+
+      if (data.data && data.data.summary_stats) {
+        const stats = data.data.summary_stats;
+        const metrics = [
+          { label: 'Total Income', value: `$${stats.total_income?.toFixed(2) || '0.00'}`, color: 'green' },
+          { label: 'Total Expenses', value: `$${stats.total_expenses?.toFixed(2) || '0.00'}`, color: 'red' },
+          { label: 'Net Cash Flow', value: `$${stats.net_cash_flow?.toFixed(2) || '0.00'}`, color: stats.net_cash_flow >= 0 ? 'green' : 'red' },
+          { label: 'Transaction Count', value: stats.transaction_count || 0, color: 'text' },
+          { label: 'Top Category', value: stats.top_category || 'N/A', color: 'text' },
+          { label: 'Avg Transaction', value: `$${stats.avg_transaction?.toFixed(2) || '0.00'}`, color: 'text' }
+        ];
+
+        metrics.forEach(metric => {
+          const statDiv = document.createElement('div');
+          statDiv.className = 'stat';
+          statDiv.innerHTML = `
+            <div class="stat-label">${metric.label}</div>
+            <div class="stat-value" style="color: var(--${metric.color})">${metric.value}</div>
+          `;
+          statsGrid.appendChild(statDiv);
+        });
+      }
+
+      showStatus('Summary metrics loaded', 'success');
+    }
+
+    function displayRecurringReport(data) {
+      if (data.data && data.data.recurring_patterns) {
+        const patterns = data.data.recurring_patterns;
+        let message = `Found ${patterns.length} recurring payment patterns:\n`;
+        patterns.slice(0, 5).forEach(pattern => {
+          message += `• ${pattern.description} - $${pattern.amount} (${pattern.frequency})\n`;
+        });
+        showStatus(message, 'info');
+      }
+    }
+
+    function displayNarrative(data) {
+      if (data.narrative) {
+        let message = 'Financial Analysis Report:\n\n';
+        if (typeof data.narrative === 'string') {
+          message += data.narrative;
+        } else if (data.narrative.narrative) {
+          message += data.narrative.narrative + '\n\n';
+          if (data.narrative.insights && data.narrative.insights.length) {
+            message += 'Key Insights:\n';
+            data.narrative.insights.forEach(insight => {
+              message += '• ' + insight + '\n';
+            });
+            message += '\n';
+          }
+          if (data.narrative.action_items && data.narrative.action_items.length) {
+            message += 'Recommended Actions:\n';
+            data.narrative.action_items.forEach(item => {
+              message += `• [${item.priority}] ${item.action}\n`;
+            });
+          }
+        }
+        showStatus(message, 'success');
+      }
+    }
+
+    async function createNewProfile() {
+      document.getElementById('createProfileModal').classList.remove('hidden');
+      document.getElementById('createProfileForm').reset();
+      document.getElementById('createProfileError').classList.remove('show');
+    }
+
+    function closeCreateProfileModal() {
+      document.getElementById('createProfileModal').classList.add('hidden');
+      document.getElementById('createProfileError').classList.remove('show');
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('createProfileModal');
+        if (!modal.classList.contains('hidden')) {
+          closeCreateProfileModal();
+        }
+      }
+    });
+
+    // Close modal when clicking outside the container
+    document.getElementById('createProfileModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'createProfileModal') {
+        closeCreateProfileModal();
+      }
+    });
+
+    async function handleCreateProfile(e) {
+      e.preventDefault();
+      const errorEl = document.getElementById('createProfileError');
+      errorEl.classList.remove('show');
+
+      const profileName = document.getElementById('newProfileName').value.trim();
+      const folderId = document.getElementById('newProfileFolderId').value.trim();
+      const folderName = document.getElementById('newProfileFolderName').value.trim();
+      const btn = document.getElementById('createProfileBtn');
+
+      if (!profileName) {
+        errorEl.textContent = 'Profile name is required';
+        errorEl.classList.add('show');
+        return;
+      }
+
+      if ((folderId && !folderName) || (!folderId && folderName)) {
+        errorEl.textContent = 'Provide both Drive folder ID and display name, or leave both blank';
+        errorEl.classList.add('show');
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const res = await authFetch('/api/v1/profiles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile_name: profileName,
+            google_drive_folder_id: folderId,
+            google_drive_folder_name: folderName
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          errorEl.textContent = data.detail || 'Failed to create profile';
+          errorEl.classList.add('show');
+          return;
+        }
+
+        // Success - reload profiles and close modal
+        await loadUserProfiles();
+        closeCreateProfileModal();
+        renderProfileGrid();
+
+      } catch (err) {
+        errorEl.textContent = err.message || 'Error creating profile';
+        errorEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function handleLogout() {
+      if (confirm('Logout and return to login?')) {
+        clearAuth();
+        showAuthScreen();
+        startOver();
+      }
+    }
+
+    function clearAuth() {
+      jwtToken = null;
+      currentUser = {};
+      userProfiles = [];
+      setCurrentProfile(null);
+      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('currentUser');
+    }
+
+    // API wrapper to include auth header
+    async function authFetch(url, options = {}) {
+      if (!jwtToken) throw new Error('Not authenticated');
+
+      const headers = {
+        'Authorization': `Bearer ${jwtToken}`,
+        ...options.headers
+      };
+
+      // Add profile_id to URL if not already present and it's an upload
+      if (
+        currentProfile.id &&
+        options.method === 'POST' &&
+        url.includes('/uploads') &&
+        !/[?&]profile_id=/.test(url)
+      ) {
+        const sep = url.includes('?') ? '&' : '?';
+        url += sep + 'profile_id=' + currentProfile.id;
+      }
+
+      return fetch(url, {
+        ...options,
+        headers
+      });
+    }
+
     // ── State ──────────────────────────────────────────────────────────────
     let files   = [];
     let batchId = null;
@@ -734,6 +2044,114 @@
       out.scrollTop = out.scrollHeight;
     }
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    function formatDuration(ms) {
+      if (ms == null || isNaN(ms)) return '—';
+      const totalSeconds = Math.max(0, Math.round(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+      if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+      return `${seconds}s`;
+    }
+    function slugify(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'no-data';
+    }
+    function healthValueClass(status) {
+      const slug = slugify(status);
+      if (slug === 'excellent' || slug === 'good' || slug === 'average' || slug === 'poor' || slug === 'no-data') {
+        return slug;
+      }
+      return 'no-data';
+    }
+    async function fetchHealthReport(batchId) {
+      const res = await authFetch(`/api/v1/reports/health?batch_id=${encodeURIComponent(batchId)}`);
+      if (!res.ok) {
+        let message = 'Failed to load health report';
+        try {
+          const data = await res.json();
+          message = data.detail || message;
+        } catch (_) {}
+        throw new Error(message);
+      }
+      return res.json();
+    }
+    function renderHealthCard(health) {
+      const card = document.getElementById('healthCard');
+      if (!card) return;
+
+      if (!health) {
+        card.classList.add('hidden');
+        card.innerHTML = '';
+        return;
+      }
+
+      const status = health.status || health.health_status || 'No Data';
+      const score = typeof health.score === 'number' ? health.score : health.health_score;
+      const scoreClass = healthValueClass(status);
+      const subscores = health.subscores || {};
+      const drivers = health.drivers || [];
+      const recommendations = health.recommendations || [];
+      const metrics = health.metrics || {};
+      const dateRange = health.date_range || {};
+      const transactionCount = health.transaction_count ?? 0;
+      const batchStatus = health.batch_status || 'unknown';
+
+      card.classList.remove('hidden');
+      card.innerHTML = `
+        <div class="health-header">
+          <div class="health-score-wrap">
+            <div class="health-score">
+              <div class="health-score-label">Financial Health</div>
+              <div class="health-score-value ${scoreClass}">${score ?? '—'}</div>
+              <div class="health-status ${scoreClass}">${esc(status)}</div>
+            </div>
+          </div>
+          <div class="health-summary">
+            ${esc(health.summary || 'No summary available.')}
+            <div class="health-meta">
+              <span class="health-pill"><strong>Transactions</strong> ${transactionCount}</span>
+              <span class="health-pill"><strong>Income</strong> ${money(metrics.total_income)}</span>
+              <span class="health-pill"><strong>Expenses</strong> ${money(metrics.total_expenses)}</span>
+              <span class="health-pill"><strong>Range</strong> ${esc(dateRange.from || '—')} → ${esc(dateRange.to || '—')}</span>
+              <span class="health-pill"><strong>Batch</strong> ${esc(batchStatus)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="health-subgrid">
+          ${Object.entries(subscores).map(([key, item]) => `
+            <div class="health-subscore">
+              <div class="health-subscore-label">${esc(key.replace(/_/g, ' '))}</div>
+              <div class="health-subscore-value"><strong>${esc(String(item.score ?? 0))}</strong><span>/ ${esc(String(item.max_score ?? 0))}</span></div>
+              <div class="stat-sub" style="margin-top:8px">${esc(item.detail || '—')}</div>
+            </div>
+          `).join('')}
+        </div>
+        ${drivers.length ? `
+          <div class="block-title" style="margin:4px 0 10px">Health Drivers</div>
+          <div class="health-drivers">
+            ${drivers.map(d => `
+              <div class="health-driver">
+                <div class="health-driver-imp ${d.impact >= 0 ? 'pos' : 'neg'}">${d.impact >= 0 ? '+' : ''}${esc(String(d.impact ?? 0))}</div>
+                <div class="health-driver-body">
+                  <div class="health-driver-label">${esc(d.label || 'Driver')}</div>
+                  <div class="health-driver-detail">${esc(d.detail || '')}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${recommendations.length ? `
+          <div class="block-title" style="margin:14px 0 10px">Recommendations</div>
+          <div class="health-rec-row">
+            ${recommendations.map(r => `<div class="health-rec-item">${esc(r)}</div>`).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
 
     // ── Live ticker — animated log line that cycles messages while waiting ──
     let _tickerInterval = null;
@@ -767,6 +2185,10 @@
 
     // ── Processing ─────────────────────────────────────────────────────────
     async function processFiles() {
+      if (!currentProfile.id) {
+        showErr('Select a profile before uploading files.');
+        return;
+      }
       if (!files.length) return;
       clearErr(); processBtn.disabled = true;
 
@@ -781,7 +2203,7 @@
         log('UPLOADING FILES...');
         const fd = new FormData();
         files.forEach(f => fd.append('files', f));
-        const upRes = await fetch('/api/v1/uploads', { method:'POST', body:fd });
+        const upRes = await authFetch('/api/v1/uploads', { method:'POST', body:fd });
         if (!upRes.ok) { const e = await upRes.json().catch(()=>({})); throw new Error(e.detail || 'Upload failed'); }
         const upData = await upRes.json();
         batchId = upData.batch_id;
@@ -807,7 +2229,7 @@
           'VALIDATING TRANSACTION RECORDS — CHECKING FOR GAPS...',
           'WRITING TRANSACTIONS TO SESSION DATABASE...',
         ]);
-        const recRes = await fetch('/api/v1/pipeline/reconcile', {
+        const recRes = await authFetch('/api/v1/pipeline/reconcile', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ batch_id: batchId }),
         });
@@ -837,7 +2259,7 @@
           'COMPOSING FINANCIAL STORY — INSIGHTS · RISKS · ACTION ITEMS...',
           '// PREPARING REPORT. RESULTS MAY CAUSE EXISTENTIAL REFLECTION...',
         ], 2800);
-        const narRes = await fetch('/api/v1/agent/narrative', {
+        const narRes = await authFetch('/api/v1/agent/narrative', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ batch_id: batchId }),
         });
@@ -846,14 +2268,20 @@
         stopTicker('FINANCIAL NARRATIVE GENERATED ///', 'ok');
 
         // Step 4: Fetch transaction line items
-        const txnRes = await fetch(`/api/v1/transactions?batch_id=${batchId}&limit=500`);
+        const txnRes = await authFetch(`/api/v1/transactions?batch_id=${batchId}&limit=500`);
         const txnData = txnRes.ok ? await txnRes.json() : { transactions: [] };
+        let healthData = null;
+        try {
+          healthData = await fetchHealthReport(batchId);
+        } catch (healthErr) {
+          console.warn('Health report unavailable:', healthErr);
+        }
 
         log('ANALYSIS COMPLETE ///', 'done');
         await sleep(500);
 
         document.getElementById('terminalWindow').style.display = 'none';
-        renderResults(narData, txnData.transactions || []);
+        renderResults(narData, txnData.transactions || [], healthData);
         unlockChat();
 
       } catch (err) {
@@ -884,7 +2312,7 @@
       return (v < 0 ? '-' : '+') + '$' + a.toFixed(2);
     }
 
-    function renderResults(rawData, transactions) {
+    function renderResults(rawData, transactions, healthReport = null) {
       const data = unwrap(rawData);
       const s    = data.summary_stats || {};
       const net  = s.net_cash_flow || 0;
@@ -904,6 +2332,8 @@
           <div class="stat-value ${c.cls}">${c.val}</div>
           <div class="stat-sub">${c.sub}</div>
         </div>`).join('');
+
+      renderHealthCard(healthReport || data.health_breakdown || null);
 
       // Transaction table
       _allTransactions = transactions;
@@ -1198,7 +2628,7 @@
       const thinkEl = appendMsg('agent', '', true);
 
       try {
-        const res = await fetch('/api/v1/agent/chat', {
+        const res = await authFetch('/api/v1/agent/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ batch_id: batchId, query, history: chatHistory }),
@@ -1227,8 +2657,27 @@
     async function wipeData() {
       if (!confirm('Wipe ALL session data from the database? This cannot be undone.')) return;
       try {
-        await fetch('/api/v1/admin/reset', { method: 'POST' });
-        startOver();
+        let res;
+        if (jwtToken) {
+          res = await authFetch('/api/v1/admin/reset', { method: 'POST' });
+        } else {
+          res = await fetch('/api/v1/admin/reset', { method: 'POST' });
+        }
+
+        if (!res.ok) {
+          let msg = 'Reset failed';
+          try {
+            const data = await res.json();
+            msg = data.detail || data.message || msg;
+          } catch (_) {
+            // keep generic message
+          }
+          throw new Error(msg);
+        }
+
+        clearAuth();
+        showAuthScreen();
+        alert('Database reset complete.');
       } catch (e) {
         alert('Wipe failed: ' + e.message);
       }
@@ -1239,6 +2688,8 @@
       files = []; batchId = null; chatHistory = []; _allTransactions = []; _riskFlags = [];
       renderFiles(); clearErr(); processBtn.disabled = true;
       lockChat();
+      hideProcessingIndicator();
+      updateProfileContextUI();
       document.getElementById('tab-analysis').classList.add('tab--disabled');
       document.getElementById('results').classList.remove('results--visible');
       document.getElementById('logOutput').innerHTML = '';

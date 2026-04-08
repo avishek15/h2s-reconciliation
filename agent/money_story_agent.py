@@ -6,23 +6,20 @@ via four tools and synthesizes a structured financial narrative.
 import json
 import os
 import re
+from typing import Optional, Callable
 
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
-from google import genai
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent.tools.summary_metrics import get_summary_metrics
 from agent.tools.reconciliation_flags import get_reconciliation_flags
 from agent.tools.recurring_patterns import get_recurring_patterns
 from agent.tools.period_comparison import get_period_comparison
 
-project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-location   = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
 model_id   = os.getenv("MODEL", "gemini-2.5-flash")
-
-client = genai.Client(vertexai=True, project=project_id, location=location)
 
 AGENT_INSTRUCTION = """
 You are MoneyStoryAgent, an expert AI financial analyst. Your job is to analyze
@@ -81,7 +78,24 @@ def create_money_story_agent() -> Agent:
     )
 
 
-async def run_agent(batch_id: str, user_query: str | None = None) -> dict:
+async def run_agent(
+    batch_id: str,
+    user_query: str | None = None,
+    db: Optional[AsyncSession] = None,
+    status_callback: Optional[Callable[[str], None]] = None,
+) -> dict:
+    """
+    Run the MoneyStoryAgent for a given batch.
+    
+    Args:
+        batch_id: Batch ID to analyze
+        user_query: Optional custom query/prompt
+        db: Optional database session (for future extensions)
+        status_callback: Optional callback for status updates
+    
+    Returns:
+        dict: Agent response with narrative, insights, actions, risk_flags, summary_stats
+    """
     agent = create_money_story_agent()
     session_service = InMemorySessionService()
 

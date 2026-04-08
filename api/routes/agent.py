@@ -1,39 +1,74 @@
 import asyncio
 import json
-import os
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from google import genai
 from google.genai import types as genai_types
 
 from api.models import ChatRequest, ChatResponse, NarrativeRequest, NarrativeResponse
-from core.database import AIReport, Transaction, UploadBatch, get_db
+from core.auth import get_current_user, get_owned_batch
+from core.database import AIReport, Transaction, User, _iso, get_db
+from core.gemini_client import get_gemini_client, get_gemini_model_id
 from agent.money_story_agent import run_agent
 
 router = APIRouter()
 
-_project  = os.getenv("GOOGLE_CLOUD_PROJECT")
-_location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-_model    = os.getenv("MODEL", "gemini-2.5-flash")
-_client   = genai.Client(vertexai=True, project=_project, location=_location)
+_model = get_gemini_model_id()
+
+
+def deserialize_narrative_payload(payload: str) -> dict:
+    """Normalize stored AI report payloads into the response model shape."""
+    try:
+        parsed = json.loads(payload)
+        if isinstance(parsed, dict):
+            return parsed
+    except (TypeError, json.JSONDecodeError):
+        pass
+
+    return {
+        "narrative": payload or "No narrative available.",
+        "insights": [],
+        "action_items": [],
+        "risk_flags": [],
+        "summary_stats": {},
+    }
 
 
 @router.post("/narrative", response_model=NarrativeResponse, tags=["agent"])
-async def generate_narrative(request: NarrativeRequest, db: AsyncSession = Depends(get_db)):
+async def generate_narrative(
+    request: NarrativeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Phase 3: Run the MoneyStoryAgent (ADK + Gemini) against the normalized
     transaction data to produce a financial narrative.
+    Requires authentication - batch must belong to user's profile.
     """
-    result = await db.execute(
-        select(UploadBatch).where(UploadBatch.batch_id == request.batch_id)
-    )
-    batch = result.scalar_one_or_none()
-    if not batch:
-        raise HTTPException(status_code=404, detail=f"Batch {request.batch_id} not found")
+    if not await get_owned_batch(db, request.batch_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {request.batch_id} not found or access denied",
+        )
+
+    if not request.query:
+        existing_report_result = await db.execute(
+            select(AIReport)
+            .where(AIReport.batch_id == request.batch_id)
+            .order_by(AIReport.created_at.desc())
+            .limit(1)
+        )
+        existing_report = existing_report_result.scalar_one_or_none()
+        if existing_report and existing_report.narrative:
+            return NarrativeResponse(
+                batch_id=request.batch_id,
+                report_id=existing_report.id,
+                narrative=deserialize_narrative_payload(existing_report.narrative),
+                created_at=_iso(existing_report.created_at),
+            )
 
     agent_result = await run_agent(request.batch_id, request.query)
 
@@ -51,22 +86,27 @@ async def generate_narrative(request: NarrativeRequest, db: AsyncSession = Depen
         batch_id=request.batch_id,
         report_id=report_id,
         narrative=agent_result,
-        created_at=report.created_at.isoformat(),
+        created_at=_iso(report.created_at),
     )
 
 
 @router.post("/chat", response_model=ChatResponse, tags=["agent"])
-async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Q&A chat using the full transaction dataset for this session as context.
     Direct Gemini call — no ADK overhead needed for conversational Q&A.
     Session-scoped: only transactions for request.batch_id are included.
+    Requires authentication - batch must belong to user's profile.
     """
-    result = await db.execute(
-        select(UploadBatch).where(UploadBatch.batch_id == request.batch_id)
-    )
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail=f"Batch {request.batch_id} not found")
+    if not await get_owned_batch(db, request.batch_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {request.batch_id} not found or access denied",
+        )
 
     # Load all transactions for this session
     txn_result = await db.execute(
@@ -135,7 +175,7 @@ User: {request.query}
 Answer using the pre-computed summary for totals and aggregate questions. Use the full transaction list for specific lookups. Always answer in USD unless asked for original currency. Be concise and direct."""
 
     def _call():
-        return _client.models.generate_content(
+        return get_gemini_client().models.generate_content(
             model=_model,
             contents=[genai_types.Part(text=prompt)],
         )
